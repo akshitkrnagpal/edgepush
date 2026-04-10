@@ -101,9 +101,21 @@ export default function Home() {
         </div>
       </section>
 
-      <footer className="max-w-5xl mx-auto px-6 py-12 border-t border-white/5 flex items-center justify-between text-sm text-zinc-500">
-        <p>&copy; {new Date().getFullYear()} edgepush</p>
+      <footer className="max-w-5xl mx-auto px-6 py-12 border-t border-white/5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 text-sm text-zinc-500">
+        <p>
+          &copy; {new Date().getFullYear()} edgepush. Open source, MIT
+          licensed.
+        </p>
         <div className="flex items-center gap-6">
+          <Link href="/docs" className="hover:text-zinc-300">
+            Docs
+          </Link>
+          <Link href="/legal/privacy" className="hover:text-zinc-300">
+            Privacy
+          </Link>
+          <Link href="/legal/terms" className="hover:text-zinc-300">
+            Terms
+          </Link>
           <a
             href="https://github.com/akshitkrnagpal/edgepush"
             target="_blank"
@@ -112,9 +124,6 @@ export default function Home() {
           >
             GitHub
           </a>
-          <Link href="/sign-in" className="hover:text-zinc-300">
-            Sign in
-          </Link>
         </div>
       </footer>
     </main>
