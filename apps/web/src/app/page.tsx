@@ -51,10 +51,10 @@ export default function Home() {
         </p>
         <div className="mt-10 flex flex-wrap items-center gap-3">
           <Link
-            href="/sign-up"
+            href="/sign-in"
             className="inline-flex items-center gap-2 rounded-full bg-white text-black px-6 py-3 text-sm font-medium hover:bg-zinc-200"
           >
-            Get started for free
+            Sign in with GitHub
           </Link>
           <Link
             href="/docs"
@@ -190,10 +190,10 @@ await client.send({
           </p>
           <div className="flex flex-wrap items-center justify-center gap-3">
             <Link
-              href="/sign-up"
+              href="/sign-in"
               className="inline-flex items-center gap-2 rounded-full bg-white text-black px-6 py-3 text-sm font-medium hover:bg-zinc-200"
             >
-              Create an account
+              Sign in with GitHub
             </Link>
             <a
               href="https://github.com/akshitkrnagpal/edgepush"

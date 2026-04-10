@@ -92,7 +92,7 @@ export default function PrivacyPolicyPage() {
         <Section title="Your rights">
           You can delete your account and all associated data at any time
           from the dashboard. You can request an export of your data by
-          emailing hello@akshit.io. If you are in the EU, UK, or California,
+          emailing contact@edgepush.dev. If you are in the EU, UK, or California,
           you have additional rights under GDPR and CCPA including access,
           correction, deletion, and portability.
         </Section>
@@ -104,8 +104,8 @@ export default function PrivacyPolicyPage() {
 
         <Section title="Contact">
           Questions? Email{" "}
-          <a href="mailto:hello@akshit.io" className="underline">
-            hello@akshit.io
+          <a href="mailto:contact@edgepush.dev" className="underline">
+            contact@edgepush.dev
           </a>
           .
         </Section>

@@ -97,8 +97,8 @@ export default function TermsOfServicePage() {
 
         <Section title="Contact">
           Questions? Email{" "}
-          <a href="mailto:hello@akshit.io" className="underline">
-            hello@akshit.io
+          <a href="mailto:contact@edgepush.dev" className="underline">
+            contact@edgepush.dev
           </a>
           .
         </Section>

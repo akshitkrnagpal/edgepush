@@ -10,11 +10,8 @@ export default function SettingsPage() {
   const { data: session } = authClient.useSession();
 
   const [name, setName] = useState(session?.user.name ?? "");
-  const [currentPassword, setCurrentPassword] = useState("");
-  const [newPassword, setNewPassword] = useState("");
 
   const [profileStatus, setProfileStatus] = useState<string | null>(null);
-  const [passwordStatus, setPasswordStatus] = useState<string | null>(null);
   const [deleteStatus, setDeleteStatus] = useState<string | null>(null);
 
   async function handleUpdateProfile(e: React.FormEvent) {
@@ -29,28 +26,6 @@ export default function SettingsPage() {
       setProfileStatus("Saved");
     } catch (err) {
       setProfileStatus(
-        `Error: ${err instanceof Error ? err.message : "failed"}`,
-      );
-    }
-  }
-
-  async function handleChangePassword(e: React.FormEvent) {
-    e.preventDefault();
-    setPasswordStatus(null);
-    try {
-      const result = await authClient.changePassword({
-        currentPassword,
-        newPassword,
-      });
-      if (result.error) {
-        setPasswordStatus(`Error: ${result.error.message ?? "failed"}`);
-        return;
-      }
-      setPasswordStatus("Password updated");
-      setCurrentPassword("");
-      setNewPassword("");
-    } catch (err) {
-      setPasswordStatus(
         `Error: ${err instanceof Error ? err.message : "failed"}`,
       );
     }
@@ -129,54 +104,6 @@ export default function SettingsPage() {
             className="rounded-lg bg-white text-black px-4 py-2 text-sm font-medium hover:bg-zinc-200"
           >
             Save profile
-          </button>
-        </form>
-      </section>
-
-      <section className="mb-12">
-        <h2 className="text-xl font-semibold mb-4">Password</h2>
-        <form onSubmit={handleChangePassword} className="space-y-4">
-          <div>
-            <label className="block text-xs font-medium text-zinc-400 mb-2">
-              Current password
-            </label>
-            <input
-              type="password"
-              required
-              value={currentPassword}
-              onChange={(e) => setCurrentPassword(e.target.value)}
-              className="w-full rounded-lg border border-white/10 bg-white/5 px-4 py-2 text-sm focus:outline-none focus:border-white/30"
-            />
-          </div>
-          <div>
-            <label className="block text-xs font-medium text-zinc-400 mb-2">
-              New password
-            </label>
-            <input
-              type="password"
-              required
-              minLength={8}
-              value={newPassword}
-              onChange={(e) => setNewPassword(e.target.value)}
-              className="w-full rounded-lg border border-white/10 bg-white/5 px-4 py-2 text-sm focus:outline-none focus:border-white/30"
-            />
-          </div>
-          {passwordStatus && (
-            <p
-              className={
-                passwordStatus.startsWith("Error")
-                  ? "text-sm text-red-400"
-                  : "text-sm text-emerald-300"
-              }
-            >
-              {passwordStatus}
-            </p>
-          )}
-          <button
-            type="submit"
-            className="rounded-lg bg-white text-black px-4 py-2 text-sm font-medium hover:bg-zinc-200"
-          >
-            Change password
           </button>
         </form>
       </section>
