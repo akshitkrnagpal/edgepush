@@ -13,11 +13,20 @@ export { RateLimiter } from "./rate-limiter";
 
 const app = new Hono<AppContext>();
 
-app.use(
-  "*",
-  cors({
-    origin: (origin) => origin ?? "*",
+// CORS: dashboard routes need credentials, public /v1 routes are open
+app.use("/api/*", async (c, next) => {
+  const dashboardUrl = c.env.DASHBOARD_URL;
+  return cors({
+    origin: dashboardUrl ?? c.req.header("origin") ?? "*",
     credentials: true,
+    allowHeaders: ["content-type", "authorization"],
+  })(c, next);
+});
+
+app.use(
+  "/v1/*",
+  cors({
+    origin: "*",
     allowHeaders: ["content-type", "authorization"],
   }),
 );
