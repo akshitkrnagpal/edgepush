@@ -136,6 +136,17 @@ export const api = {
     request<{ ok: boolean }>(`/api/dashboard/apps/${appId}/webhook`, {
       method: "DELETE",
     }),
+  getMetrics: (appId: string) =>
+    request<{
+      total: number;
+      delivered: number;
+      failed: number;
+      inflight: number;
+      last7: { total: number; delivered: number; failed: number };
+      last30: { total: number; delivered: number; failed: number };
+      daily: Array<{ date: string; delivered: number; failed: number }>;
+      byPlatform: { ios: number; android: number };
+    }>(`/api/dashboard/apps/${appId}/metrics`),
   sendTestPush: (
     appId: string,
     body: {

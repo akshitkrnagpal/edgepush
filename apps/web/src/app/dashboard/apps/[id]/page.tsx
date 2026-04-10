@@ -28,12 +28,24 @@ interface Credentials {
   } | null;
 }
 
+interface Metrics {
+  total: number;
+  delivered: number;
+  failed: number;
+  inflight: number;
+  last7: { total: number; delivered: number; failed: number };
+  last30: { total: number; delivered: number; failed: number };
+  daily: Array<{ date: string; delivered: number; failed: number }>;
+  byPlatform: { ios: number; android: number };
+}
+
 export default function AppDetailPage(props: {
   params: Promise<{ id: string }>;
 }) {
   const { id } = use(props.params);
   const [apiKeys, setApiKeys] = useState<ApiKey[]>([]);
   const [credentials, setCredentials] = useState<Credentials | null>(null);
+  const [metrics, setMetrics] = useState<Metrics | null>(null);
   const [loading, setLoading] = useState(true);
   const [newKey, setNewKey] = useState<string | null>(null);
 
@@ -44,12 +56,14 @@ export default function AppDetailPage(props: {
   async function refresh() {
     setLoading(true);
     try {
-      const [keys, creds] = await Promise.all([
+      const [keys, creds, met] = await Promise.all([
         api.listApiKeys(id),
         api.getCredentials(id),
+        api.getMetrics(id),
       ]);
       setApiKeys(keys.data);
       setCredentials(creds);
+      setMetrics(met);
     } catch (err) {
       console.error(err);
     } finally {
@@ -121,6 +135,40 @@ export default function AppDetailPage(props: {
         <p className="text-sm text-zinc-500">Loading...</p>
       ) : (
         <>
+          {/* Metrics */}
+          {metrics && metrics.total > 0 && (
+            <section className="mb-12">
+              <h2 className="text-xl font-semibold mb-4">Last 7 days</h2>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                <Stat
+                  label="Sent"
+                  value={metrics.last7.total.toLocaleString()}
+                />
+                <Stat
+                  label="Delivered"
+                  value={metrics.last7.delivered.toLocaleString()}
+                  sublabel={
+                    metrics.last7.total > 0
+                      ? `${((metrics.last7.delivered / metrics.last7.total) * 100).toFixed(1)}%`
+                      : undefined
+                  }
+                  color="text-emerald-300"
+                />
+                <Stat
+                  label="Failed"
+                  value={metrics.last7.failed.toLocaleString()}
+                  color="text-red-300"
+                />
+                <Stat
+                  label="Inflight"
+                  value={metrics.inflight.toLocaleString()}
+                  color="text-blue-300"
+                />
+              </div>
+              <DailyChart data={metrics.daily} />
+            </section>
+          )}
+
           {/* API Keys */}
           <section className="mb-12">
             <div className="flex items-center justify-between mb-4">
@@ -253,5 +301,93 @@ function CredentialCard({
       </div>
       <p className="text-sm text-zinc-500 font-mono">{details}</p>
     </Link>
+  );
+}
+
+function Stat({
+  label,
+  value,
+  sublabel,
+  color = "text-white",
+}: {
+  label: string;
+  value: string;
+  sublabel?: string;
+  color?: string;
+}) {
+  return (
+    <div className="border border-white/10 rounded-xl p-4">
+      <div className="text-xs uppercase tracking-wider text-zinc-500 mb-2">
+        {label}
+      </div>
+      <div className={`text-2xl font-semibold ${color}`}>{value}</div>
+      {sublabel && (
+        <div className="text-xs text-zinc-500 mt-1">{sublabel}</div>
+      )}
+    </div>
+  );
+}
+
+function DailyChart({
+  data,
+}: {
+  data: Array<{ date: string; delivered: number; failed: number }>;
+}) {
+  const max = Math.max(
+    1,
+    ...data.map((d) => d.delivered + d.failed),
+  );
+  return (
+    <div className="border border-white/10 rounded-xl p-4">
+      <div className="text-xs uppercase tracking-wider text-zinc-500 mb-4">
+        Last 14 days
+      </div>
+      <div className="flex items-end gap-1 h-24">
+        {data.map((d) => {
+          const total = d.delivered + d.failed;
+          const deliveredPct = (d.delivered / max) * 100;
+          const failedPct = (d.failed / max) * 100;
+          return (
+            <div
+              key={d.date}
+              className="flex-1 flex flex-col-reverse gap-0.5"
+              title={`${d.date}: ${d.delivered} delivered, ${d.failed} failed`}
+            >
+              {total > 0 ? (
+                <>
+                  {d.delivered > 0 && (
+                    <div
+                      className="bg-emerald-400/70 rounded-sm"
+                      style={{ height: `${deliveredPct}%`, minHeight: "2px" }}
+                    />
+                  )}
+                  {d.failed > 0 && (
+                    <div
+                      className="bg-red-400/70 rounded-sm"
+                      style={{ height: `${failedPct}%`, minHeight: "2px" }}
+                    />
+                  )}
+                </>
+              ) : (
+                <div
+                  className="bg-white/[0.03] rounded-sm"
+                  style={{ height: "2px" }}
+                />
+              )}
+            </div>
+          );
+        })}
+      </div>
+      <div className="flex items-center gap-4 mt-4 text-xs text-zinc-500">
+        <div className="flex items-center gap-1.5">
+          <span className="w-2 h-2 rounded-sm bg-emerald-400/70" />
+          Delivered
+        </div>
+        <div className="flex items-center gap-1.5">
+          <span className="w-2 h-2 rounded-sm bg-red-400/70" />
+          Failed
+        </div>
+      </div>
+    </div>
   );
 }

@@ -441,6 +441,92 @@ dashboardRouter.get("/apps/:id/credentials", async (c) => {
   return c.json({ apns: apnsRow, fcm: fcmRow });
 });
 
+// --- Usage metrics ---
+
+dashboardRouter.get("/apps/:id/metrics", async (c) => {
+  const user = await getSessionUser(c);
+  if (!user) return c.json({ error: "unauthorized" }, 401);
+
+  const appId = c.req.param("id");
+  const app = await c.var.db
+    .select()
+    .from(apps)
+    .where(and(eq(apps.id, appId), eq(apps.userId, user.id)))
+    .limit(1)
+    .then((rows) => rows[0] ?? null);
+  if (!app) return c.json({ error: "not_found" }, 404);
+
+  // Total + by status over last 7 days and 30 days
+  const now = Date.now();
+  const sevenDaysAgo = now - 7 * 24 * 60 * 60 * 1000;
+  const thirtyDaysAgo = now - 30 * 24 * 60 * 60 * 1000;
+
+  // Drizzle doesn't have a clean COUNT GROUP BY helper for D1 in this version;
+  // fetch a slice and aggregate in memory. For launch scale (<100k msgs/app)
+  // this is fine. We bound at 10000 rows just in case.
+  const rows = await c.var.db
+    .select({
+      status: messages.status,
+      platform: messages.platform,
+      createdAt: messages.createdAt,
+    })
+    .from(messages)
+    .where(eq(messages.appId, appId))
+    .orderBy(desc(messages.createdAt))
+    .limit(10000);
+
+  const total = rows.length;
+  const delivered = rows.filter((r) => r.status === "delivered").length;
+  const failed = rows.filter((r) => r.status === "failed").length;
+  const inflight = rows.filter(
+    (r) => r.status === "queued" || r.status === "sending",
+  ).length;
+
+  const last7 = rows.filter((r) => r.createdAt >= sevenDaysAgo);
+  const last30 = rows.filter((r) => r.createdAt >= thirtyDaysAgo);
+
+  // Daily series for last 14 days
+  const dayBuckets: Record<string, { delivered: number; failed: number }> = {};
+  for (let i = 13; i >= 0; i--) {
+    const d = new Date(now - i * 24 * 60 * 60 * 1000);
+    const key = d.toISOString().slice(0, 10);
+    dayBuckets[key] = { delivered: 0, failed: 0 };
+  }
+  for (const r of rows) {
+    if (r.createdAt < now - 14 * 24 * 60 * 60 * 1000) continue;
+    const key = new Date(r.createdAt).toISOString().slice(0, 10);
+    const bucket = dayBuckets[key];
+    if (!bucket) continue;
+    if (r.status === "delivered") bucket.delivered++;
+    else if (r.status === "failed") bucket.failed++;
+  }
+
+  return c.json({
+    total,
+    delivered,
+    failed,
+    inflight,
+    last7: {
+      total: last7.length,
+      delivered: last7.filter((r) => r.status === "delivered").length,
+      failed: last7.filter((r) => r.status === "failed").length,
+    },
+    last30: {
+      total: last30.length,
+      delivered: last30.filter((r) => r.status === "delivered").length,
+      failed: last30.filter((r) => r.status === "failed").length,
+    },
+    daily: Object.entries(dayBuckets).map(([date, counts]) => ({
+      date,
+      ...counts,
+    })),
+    byPlatform: {
+      ios: rows.filter((r) => r.platform === "ios").length,
+      android: rows.filter((r) => r.platform === "android").length,
+    },
+  });
+});
+
 // --- Messages history ---
 
 dashboardRouter.get("/apps/:id/messages", async (c) => {
