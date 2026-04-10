@@ -3,15 +3,24 @@ import { cors } from "hono/cors";
 
 import { createDb } from "./db";
 import { handleQueue } from "./dispatch";
-import { sendRouter } from "./routes/send";
+import { createAuth } from "./lib/better-auth";
+import { dashboardRouter } from "./routes/dashboard";
 import { receiptsRouter } from "./routes/receipts";
+import { sendRouter } from "./routes/send";
 import type { AppContext, DispatchJob, Env } from "./types";
 
 export { RateLimiter } from "./rate-limiter";
 
 const app = new Hono<AppContext>();
 
-app.use("*", cors());
+app.use(
+  "*",
+  cors({
+    origin: (origin) => origin ?? "*",
+    credentials: true,
+    allowHeaders: ["content-type", "authorization"],
+  }),
+);
 
 // Inject db into context for every request
 app.use("*", async (c, next) => {
@@ -29,6 +38,16 @@ app.get("/", (c) =>
 
 app.get("/health", (c) => c.json({ status: "ok" }));
 
+// Better Auth: mount at /api/auth/**
+app.on(["GET", "POST"], "/api/auth/**", async (c) => {
+  const auth = createAuth(c.env);
+  return auth.handler(c.req.raw);
+});
+
+// Dashboard routes (require Better Auth session cookie)
+app.route("/api/dashboard", dashboardRouter);
+
+// Public push API (Bearer API key)
 app.route("/v1", sendRouter);
 app.route("/v1", receiptsRouter);
 
