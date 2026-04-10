@@ -1,0 +1,28 @@
+{
+  "name": "@edgepush/cli",
+  "version": "0.0.0",
+  "description": "Command line interface for edgepush. Send push notifications from your terminal.",
+  "type": "module",
+  "bin": {
+    "edgepush": "./src/index.ts"
+  },
+  "main": "./src/index.ts",
+  "files": [
+    "dist",
+    "src",
+    "README.md"
+  ],
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "keywords": ["edgepush", "cli", "push-notifications", "apns", "fcm"],
+  "repository": "github:akshitkrnagpal/edgepush",
+  "license": "MIT",
+  "dependencies": {
+    "@edgepush/sdk": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "typescript": "~5.9.3"
+  }
+}
