@@ -596,6 +596,64 @@ dashboardRouter.delete("/apps/:id/webhook", async (c) => {
   return c.json({ ok: true });
 });
 
+// --- Test push ---
+
+const TestPushSchema = z.object({
+  to: z.string().min(1),
+  platform: z.enum(["ios", "android"]).optional(),
+  title: z.string().max(256).optional(),
+  body: z.string().max(4000).optional(),
+});
+
+dashboardRouter.post("/apps/:id/test-push", async (c) => {
+  const user = await getSessionUser(c);
+  if (!user) return c.json({ error: "unauthorized" }, 401);
+
+  const appId = c.req.param("id");
+  const app = await c.var.db
+    .select()
+    .from(apps)
+    .where(and(eq(apps.id, appId), eq(apps.userId, user.id)))
+    .limit(1)
+    .then((rows) => rows[0] ?? null);
+  if (!app) return c.json({ error: "not_found" }, 404);
+
+  const parseResult = TestPushSchema.safeParse(await c.req.json());
+  if (!parseResult.success) {
+    return c.json(
+      { error: "invalid_request", issues: parseResult.error.issues },
+      400,
+    );
+  }
+
+  const msg = parseResult.data;
+  const platform =
+    msg.platform ?? (/^[0-9a-f]{64}$/i.test(msg.to) ? "ios" : "android");
+  const title = msg.title ?? "Test push from edgepush";
+  const body =
+    msg.body ?? "If you received this, your setup is working correctly.";
+
+  const id = generateId();
+  const now = Date.now();
+  await c.var.db.insert(messages).values({
+    id,
+    appId,
+    to: msg.to,
+    platform,
+    title,
+    body,
+    payloadJson: JSON.stringify({ to: msg.to, title, body, platform }),
+    status: "queued",
+    tokenInvalid: false,
+    createdAt: now,
+    updatedAt: now,
+  });
+
+  await c.env.DISPATCH_QUEUE.send({ messageId: id, appId });
+
+  return c.json({ id });
+});
+
 // --- Audit log ---
 
 dashboardRouter.get("/apps/:id/audit", async (c) => {

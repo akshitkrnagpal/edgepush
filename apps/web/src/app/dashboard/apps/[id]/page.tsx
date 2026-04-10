@@ -193,6 +193,12 @@ export default function AppDetailPage(props: {
 
           <section className="flex flex-wrap items-center gap-6">
             <Link
+              href={`/dashboard/apps/${id}/test`}
+              className="rounded-lg bg-white text-black px-4 py-2 text-sm font-medium hover:bg-zinc-200"
+            >
+              Send test push
+            </Link>
+            <Link
               href={`/dashboard/apps/${id}/messages`}
               className="text-sm text-zinc-400 hover:text-zinc-200 underline underline-offset-4"
             >

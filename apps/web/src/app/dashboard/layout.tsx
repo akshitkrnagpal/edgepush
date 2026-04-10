@@ -46,6 +46,12 @@ export default function DashboardLayout({
           >
             Apps
           </Link>
+          <Link
+            href="/dashboard/settings"
+            className="text-sm text-zinc-400 hover:text-zinc-200"
+          >
+            Settings
+          </Link>
         </div>
         <div className="flex items-center gap-4">
           <span className="text-sm text-zinc-500">{session.user.email}</span>

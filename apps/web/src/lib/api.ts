@@ -136,6 +136,19 @@ export const api = {
     request<{ ok: boolean }>(`/api/dashboard/apps/${appId}/webhook`, {
       method: "DELETE",
     }),
+  sendTestPush: (
+    appId: string,
+    body: {
+      to: string;
+      platform?: "ios" | "android";
+      title?: string;
+      body?: string;
+    },
+  ) =>
+    request<{ id: string }>(`/api/dashboard/apps/${appId}/test-push`, {
+      method: "POST",
+      body: JSON.stringify(body),
+    }),
   listAuditLog: (appId: string) =>
     request<{
       data: Array<{
