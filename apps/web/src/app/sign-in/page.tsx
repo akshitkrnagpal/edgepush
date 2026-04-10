@@ -15,7 +15,9 @@ export default function SignInPage() {
     try {
       await authClient.signIn.social({
         provider: "github",
-        callbackURL: "/dashboard",
+        // Absolute URL because Better Auth resolves relative URLs against
+        // its own baseURL (the API host), not the dashboard origin.
+        callbackURL: `${window.location.origin}/dashboard`,
       });
     } catch (err) {
       setError(err instanceof Error ? err.message : "Sign in failed");
