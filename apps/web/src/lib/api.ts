@@ -118,4 +118,31 @@ export const api = {
         updatedAt: number;
       }>;
     }>(`/api/dashboard/apps/${appId}/messages`),
+  getWebhook: (appId: string) =>
+    request<{
+      url: string;
+      enabled: boolean;
+      updatedAt: number;
+    } | null>(`/api/dashboard/apps/${appId}/webhook`),
+  upsertWebhook: (
+    appId: string,
+    body: { url: string; enabled?: boolean },
+  ) =>
+    request<{ ok: boolean; secret?: string }>(
+      `/api/dashboard/apps/${appId}/webhook`,
+      { method: "PUT", body: JSON.stringify(body) },
+    ),
+  deleteWebhook: (appId: string) =>
+    request<{ ok: boolean }>(`/api/dashboard/apps/${appId}/webhook`, {
+      method: "DELETE",
+    }),
+  listAuditLog: (appId: string) =>
+    request<{
+      data: Array<{
+        id: string;
+        action: string;
+        metadata: Record<string, unknown> | null;
+        createdAt: number;
+      }>;
+    }>(`/api/dashboard/apps/${appId}/audit`),
 };

@@ -191,12 +191,24 @@ export default function AppDetailPage(props: {
             </div>
           </section>
 
-          <section>
+          <section className="flex flex-wrap items-center gap-6">
             <Link
               href={`/dashboard/apps/${id}/messages`}
               className="text-sm text-zinc-400 hover:text-zinc-200 underline underline-offset-4"
             >
-              View send history &rarr;
+              Send history &rarr;
+            </Link>
+            <Link
+              href={`/dashboard/apps/${id}/webhook`}
+              className="text-sm text-zinc-400 hover:text-zinc-200 underline underline-offset-4"
+            >
+              Webhook &rarr;
+            </Link>
+            <Link
+              href={`/dashboard/apps/${id}/audit`}
+              className="text-sm text-zinc-400 hover:text-zinc-200 underline underline-offset-4"
+            >
+              Activity log &rarr;
             </Link>
           </section>
         </>
