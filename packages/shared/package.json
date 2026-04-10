@@ -1,0 +1,21 @@
+{
+  "name": "@edgepush/shared",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Shared types and utilities for edgepush",
+  "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "zod": "^3.25.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.9.3"
+  }
+}

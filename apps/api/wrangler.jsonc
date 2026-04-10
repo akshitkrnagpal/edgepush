@@ -1,0 +1,67 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "edgepush-api",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-04-10",
+  "compatibility_flags": ["nodejs_compat"],
+  "workers_dev": true,
+
+  // Environment variables set via `wrangler secret put`
+  "vars": {
+    "BETTER_AUTH_URL": "https://edgepush-api.workers.dev"
+  },
+
+  // D1 database for tenants, apps, tokens, receipts, push credentials
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "edgepush",
+      "database_id": "00000000-0000-0000-0000-000000000000",
+      "migrations_dir": "migrations"
+    }
+  ],
+
+  // KV for hot paths (token -> app mapping cache)
+  "kv_namespaces": [
+    {
+      "binding": "CACHE",
+      "id": "00000000000000000000000000000000"
+    }
+  ],
+
+  // Queues for async push dispatch with retries
+  "queues": {
+    "producers": [
+      {
+        "queue": "edgepush-dispatch",
+        "binding": "DISPATCH_QUEUE"
+      }
+    ],
+    "consumers": [
+      {
+        "queue": "edgepush-dispatch",
+        "max_batch_size": 100,
+        "max_batch_timeout": 5,
+        "max_retries": 3,
+        "dead_letter_queue": "edgepush-dispatch-dlq"
+      }
+    ]
+  },
+
+  // Durable Object for per-app rate limiting
+  "durable_objects": {
+    "bindings": [
+      {
+        "name": "RATE_LIMITER",
+        "class_name": "RateLimiter"
+      }
+    ]
+  },
+
+  "migrations": [
+    {
+      "tag": "v1",
+      "new_sqlite_classes": ["RateLimiter"]
+    }
+  ]
+}

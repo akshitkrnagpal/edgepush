@@ -1,0 +1,30 @@
+{
+  "name": "@edgepush/api",
+  "version": "0.0.0",
+  "private": true,
+  "description": "edgepush HTTP API running on Cloudflare Workers",
+  "type": "module",
+  "main": "./src/index.ts",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate:local": "wrangler d1 migrations apply edgepush --local",
+    "db:migrate:remote": "wrangler d1 migrations apply edgepush --remote",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@edgepush/shared": "workspace:*",
+    "better-auth": "^1.6.2",
+    "drizzle-orm": "^0.45.2",
+    "hono": "^4.12.12",
+    "jose": "^6.2.2",
+    "zod": "^3.25.0"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20260410.1",
+    "drizzle-kit": "^0.31.10",
+    "typescript": "^5.9.3",
+    "wrangler": "^4.81.1"
+  }
+}
