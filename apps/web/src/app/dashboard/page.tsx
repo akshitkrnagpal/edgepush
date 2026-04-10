@@ -1,55 +1,27 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 
-import { api } from "@/lib/api";
-
-interface App {
-  id: string;
-  name: string;
-  packageName: string;
-  createdAt: number;
-}
+import { useApps, useCreateApp } from "@/lib/queries";
 
 export default function DashboardPage() {
-  const [apps, setApps] = useState<App[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [creating, setCreating] = useState(false);
+  const apps = useApps();
+  const createApp = useCreateApp();
+
   const [showForm, setShowForm] = useState(false);
   const [name, setName] = useState("");
   const [packageName, setPackageName] = useState("");
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    refresh();
-  }, []);
-
-  async function refresh() {
-    try {
-      const result = await api.listApps();
-      setApps(result.data);
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setLoading(false);
-    }
-  }
 
   async function handleCreate(e: React.FormEvent) {
     e.preventDefault();
-    setError(null);
-    setCreating(true);
     try {
-      await api.createApp({ name, packageName });
+      await createApp.mutateAsync({ name, packageName });
       setName("");
       setPackageName("");
       setShowForm(false);
-      await refresh();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to create app");
-    } finally {
-      setCreating(false);
+    } catch {
+      // mutation error is exposed via createApp.error below
     }
   }
 
@@ -107,14 +79,20 @@ export default function DashboardPage() {
                 prefix in your API keys.
               </p>
             </div>
-            {error && <p className="text-sm text-red-400">{error}</p>}
+            {createApp.error && (
+              <p className="text-sm text-red-400">
+                {createApp.error instanceof Error
+                  ? createApp.error.message
+                  : "Failed to create app"}
+              </p>
+            )}
             <div className="flex items-center gap-3">
               <button
                 type="submit"
-                disabled={creating}
+                disabled={createApp.isPending}
                 className="rounded-lg bg-white text-black px-4 py-2 text-sm font-medium hover:bg-zinc-200 disabled:opacity-50"
               >
-                {creating ? "Creating..." : "Create"}
+                {createApp.isPending ? "Creating..." : "Create"}
               </button>
               <button
                 type="button"
@@ -128,21 +106,11 @@ export default function DashboardPage() {
         </form>
       )}
 
-      {loading ? (
+      {apps.isLoading ? (
         <p className="text-sm text-zinc-500">Loading...</p>
-      ) : apps.length === 0 ? (
-        <div className="border border-dashed border-white/10 rounded-xl p-12 text-center">
-          <p className="text-zinc-400 mb-4">No apps yet.</p>
-          <button
-            onClick={() => setShowForm(true)}
-            className="text-sm text-zinc-200 underline underline-offset-4 hover:text-white"
-          >
-            Create your first app
-          </button>
-        </div>
-      ) : (
+      ) : apps.data && apps.data.length > 0 ? (
         <div className="space-y-3">
-          {apps.map((app) => (
+          {apps.data.map((app) => (
             <Link
               key={app.id}
               href={`/dashboard/apps/${app.id}`}
@@ -161,6 +129,16 @@ export default function DashboardPage() {
               </div>
             </Link>
           ))}
+        </div>
+      ) : (
+        <div className="border border-dashed border-white/10 rounded-xl p-12 text-center">
+          <p className="text-zinc-400 mb-4">No apps yet.</p>
+          <button
+            onClick={() => setShowForm(true)}
+            className="text-sm text-zinc-200 underline underline-offset-4 hover:text-white"
+          >
+            Create your first app
+          </button>
         </div>
       )}
     </div>

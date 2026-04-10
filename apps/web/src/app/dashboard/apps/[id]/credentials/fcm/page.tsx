@@ -4,22 +4,21 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { use, useState } from "react";
 
-import { api } from "@/lib/api";
+import { useUploadFcm } from "@/lib/queries";
 
 export default function FcmCredentialsPage(props: {
   params: Promise<{ id: string }>;
 }) {
   const { id } = use(props.params);
   const router = useRouter();
+  const uploadFcm = useUploadFcm(id);
   const [projectId, setProjectId] = useState("");
   const [serviceAccountJson, setServiceAccountJson] = useState("");
-  const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
-    setSaving(true);
     try {
       // Auto-extract project_id if the user just pastes the JSON
       if (!projectId && serviceAccountJson) {
@@ -31,7 +30,7 @@ export default function FcmCredentialsPage(props: {
         }
       }
 
-      await api.uploadFcm(id, {
+      await uploadFcm.mutateAsync({
         projectId:
           projectId ||
           (() => {
@@ -46,8 +45,6 @@ export default function FcmCredentialsPage(props: {
       router.push(`/dashboard/apps/${id}`);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to save");
-    } finally {
-      setSaving(false);
     }
   }
 
@@ -99,10 +96,10 @@ export default function FcmCredentialsPage(props: {
         <div className="flex items-center gap-3 pt-4">
           <button
             type="submit"
-            disabled={saving}
+            disabled={uploadFcm.isPending}
             className="rounded-lg bg-white text-black px-4 py-2 text-sm font-medium hover:bg-zinc-200 disabled:opacity-50"
           >
-            {saving ? "Saving..." : "Save credentials"}
+            {uploadFcm.isPending ? "Saving..." : "Save credentials"}
           </button>
           <Link
             href={`/dashboard/apps/${id}`}

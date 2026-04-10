@@ -3,51 +3,48 @@
 import Link from "next/link";
 import { use, useEffect, useState } from "react";
 
-import { api } from "@/lib/api";
+import {
+  useDeleteWebhook,
+  useUpsertWebhook,
+  useWebhook,
+} from "@/lib/queries";
 
 export default function WebhookPage(props: {
   params: Promise<{ id: string }>;
 }) {
   const { id } = use(props.params);
+  const webhook = useWebhook(id);
+  const upsertWebhook = useUpsertWebhook(id);
+  const deleteWebhook = useDeleteWebhook(id);
   const [url, setUrl] = useState("");
   const [enabled, setEnabled] = useState(true);
-  const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
   const [savedSecret, setSavedSecret] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    api
-      .getWebhook(id)
-      .then((webhook) => {
-        if (webhook) {
-          setUrl(webhook.url);
-          setEnabled(webhook.enabled);
-        }
-      })
-      .finally(() => setLoading(false));
-  }, [id]);
+    if (webhook.data) {
+      setUrl(webhook.data.url);
+      setEnabled(webhook.data.enabled);
+    }
+  }, [webhook.data]);
 
   async function handleSave(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
-    setSaving(true);
     try {
-      const result = await api.upsertWebhook(id, { url, enabled });
+      const result = await upsertWebhook.mutateAsync({ url, enabled });
       if (result.secret) {
         setSavedSecret(result.secret);
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to save webhook");
-    } finally {
-      setSaving(false);
     }
   }
 
   async function handleDelete() {
     if (!confirm("Delete this webhook? You'll lose the signing secret.")) return;
     try {
-      await api.deleteWebhook(id);
+      await deleteWebhook.mutateAsync();
       setUrl("");
       setEnabled(true);
       setSavedSecret(null);
@@ -97,7 +94,7 @@ export default function WebhookPage(props: {
         </div>
       )}
 
-      {loading ? (
+      {webhook.isLoading ? (
         <p className="text-sm text-zinc-500">Loading...</p>
       ) : (
         <form onSubmit={handleSave} className="space-y-4">
@@ -132,10 +129,10 @@ export default function WebhookPage(props: {
           <div className="flex items-center gap-3 pt-4">
             <button
               type="submit"
-              disabled={saving}
+              disabled={upsertWebhook.isPending}
               className="rounded-lg bg-white text-black px-4 py-2 text-sm font-medium hover:bg-zinc-200 disabled:opacity-50"
             >
-              {saving ? "Saving..." : "Save"}
+              {upsertWebhook.isPending ? "Saving..." : "Save"}
             </button>
             {url && (
               <button

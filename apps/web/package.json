@@ -13,6 +13,7 @@
   },
   "dependencies": {
     "@edgepush/shared": "workspace:*",
+    "@tanstack/react-query": "^5.97.0",
     "better-auth": "^1.6.2",
     "next": "16.2.3",
     "react": "19.2.4",

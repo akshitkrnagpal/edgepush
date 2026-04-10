@@ -1,36 +1,15 @@
 "use client";
 
 import Link from "next/link";
-import { use, useEffect, useState } from "react";
+import { use } from "react";
 
-import { api } from "@/lib/api";
-
-interface Message {
-  id: string;
-  to: string;
-  platform: "ios" | "android";
-  title: string | null;
-  body: string | null;
-  status: string;
-  error: string | null;
-  tokenInvalid: boolean;
-  createdAt: number;
-  updatedAt: number;
-}
+import { useMessages } from "@/lib/queries";
 
 export default function MessagesPage(props: {
   params: Promise<{ id: string }>;
 }) {
   const { id } = use(props.params);
-  const [messages, setMessages] = useState<Message[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    api
-      .listMessages(id)
-      .then((result) => setMessages(result.data))
-      .finally(() => setLoading(false));
-  }, [id]);
+  const messages = useMessages(id);
 
   return (
     <div className="max-w-5xl mx-auto px-6 py-12">
@@ -43,15 +22,15 @@ export default function MessagesPage(props: {
 
       <h1 className="text-3xl font-semibold mb-8">Send history</h1>
 
-      {loading ? (
+      {messages.isLoading ? (
         <p className="text-sm text-zinc-500">Loading...</p>
-      ) : messages.length === 0 ? (
+      ) : !messages.data || messages.data.length === 0 ? (
         <div className="border border-dashed border-white/10 rounded-xl p-12 text-center text-sm text-zinc-500">
           No messages sent yet.
         </div>
       ) : (
         <div className="space-y-2">
-          {messages.map((msg) => (
+          {messages.data.map((msg) => (
             <div
               key={msg.id}
               className="border border-white/10 rounded-lg p-4"

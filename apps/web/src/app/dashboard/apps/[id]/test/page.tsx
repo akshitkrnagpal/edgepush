@@ -3,19 +3,19 @@
 import Link from "next/link";
 import { use, useState } from "react";
 
-import { api } from "@/lib/api";
+import { useSendTestPush } from "@/lib/queries";
 
 export default function TestPushPage(props: {
   params: Promise<{ id: string }>;
 }) {
   const { id } = use(props.params);
+  const sendTestPush = useSendTestPush(id);
   const [to, setTo] = useState("");
   const [platform, setPlatform] = useState<"ios" | "android" | "">("");
   const [title, setTitle] = useState("Test push from edgepush");
   const [body, setBody] = useState(
     "If you received this, your setup is working correctly.",
   );
-  const [sending, setSending] = useState(false);
   const [result, setResult] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -23,9 +23,8 @@ export default function TestPushPage(props: {
     e.preventDefault();
     setError(null);
     setResult(null);
-    setSending(true);
     try {
-      const r = await api.sendTestPush(id, {
+      const r = await sendTestPush.mutateAsync({
         to,
         platform: platform === "" ? undefined : platform,
         title,
@@ -34,8 +33,6 @@ export default function TestPushPage(props: {
       setResult(r.id);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to send");
-    } finally {
-      setSending(false);
     }
   }
 
@@ -128,10 +125,10 @@ export default function TestPushPage(props: {
         <div className="flex items-center gap-3 pt-4">
           <button
             type="submit"
-            disabled={sending || !to}
+            disabled={sendTestPush.isPending || !to}
             className="rounded-lg bg-white text-black px-4 py-2 text-sm font-medium hover:bg-zinc-200 disabled:opacity-50"
           >
-            {sending ? "Sending..." : "Send"}
+            {sendTestPush.isPending ? "Sending..." : "Send"}
           </button>
           <Link
             href={`/dashboard/apps/${id}`}

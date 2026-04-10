@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 
+import { QueryProvider } from "@/components/query-provider";
 import { ToastProvider } from "@/components/toast";
 import { authClient } from "@/lib/auth-client";
 
@@ -35,38 +36,40 @@ export default function DashboardLayout({
   }
 
   return (
-    <ToastProvider>
-      <main className="flex-1 flex flex-col">
-        <nav className="border-b border-white/5 px-6 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-6">
-            <Link href="/dashboard" className="text-lg font-semibold">
-              edgepush
-            </Link>
-            <Link
-              href="/dashboard"
-              className="text-sm text-zinc-400 hover:text-zinc-200"
-            >
-              Apps
-            </Link>
-            <Link
-              href="/dashboard/settings"
-              className="text-sm text-zinc-400 hover:text-zinc-200"
-            >
-              Settings
-            </Link>
-          </div>
-          <div className="flex items-center gap-4">
-            <span className="text-sm text-zinc-500">{session.user.email}</span>
-            <button
-              onClick={handleSignOut}
-              className="text-sm text-zinc-400 hover:text-zinc-200"
-            >
-              Sign out
-            </button>
-          </div>
-        </nav>
-        <div className="flex-1">{children}</div>
-      </main>
-    </ToastProvider>
+    <QueryProvider>
+      <ToastProvider>
+        <main className="flex-1 flex flex-col">
+          <nav className="border-b border-white/5 px-6 py-4 flex items-center justify-between">
+            <div className="flex items-center gap-6">
+              <Link href="/dashboard" className="text-lg font-semibold">
+                edgepush
+              </Link>
+              <Link
+                href="/dashboard"
+                className="text-sm text-zinc-400 hover:text-zinc-200"
+              >
+                Apps
+              </Link>
+              <Link
+                href="/dashboard/settings"
+                className="text-sm text-zinc-400 hover:text-zinc-200"
+              >
+                Settings
+              </Link>
+            </div>
+            <div className="flex items-center gap-4">
+              <span className="text-sm text-zinc-500">{session.user.email}</span>
+              <button
+                onClick={handleSignOut}
+                className="text-sm text-zinc-400 hover:text-zinc-200"
+              >
+                Sign out
+              </button>
+            </div>
+          </nav>
+          <div className="flex-1">{children}</div>
+        </main>
+      </ToastProvider>
+    </QueryProvider>
   );
 }

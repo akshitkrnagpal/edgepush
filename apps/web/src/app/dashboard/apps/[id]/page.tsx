@@ -1,103 +1,52 @@
 "use client";
 
-import { use, useEffect, useState } from "react";
+import { use, useState } from "react";
 import Link from "next/link";
 
 import { useToast } from "@/components/toast";
-import { api } from "@/lib/api";
-
-interface ApiKey {
-  id: string;
-  label: string;
-  preview: string;
-  createdAt: number;
-  lastUsedAt: number | null;
-  revokedAt: number | null;
-}
-
-interface Credentials {
-  apns: {
-    keyId: string;
-    teamId: string;
-    bundleId: string;
-    production: boolean;
-    updatedAt: number;
-  } | null;
-  fcm: {
-    projectId: string;
-    updatedAt: number;
-  } | null;
-}
-
-interface Metrics {
-  total: number;
-  delivered: number;
-  failed: number;
-  inflight: number;
-  last7: { total: number; delivered: number; failed: number };
-  last30: { total: number; delivered: number; failed: number };
-  daily: Array<{ date: string; delivered: number; failed: number }>;
-  byPlatform: { ios: number; android: number };
-}
+import {
+  useApiKeys,
+  useCreateApiKey,
+  useCredentials,
+  useMetrics,
+  useRevokeApiKey,
+} from "@/lib/queries";
 
 export default function AppDetailPage(props: {
   params: Promise<{ id: string }>;
 }) {
   const { id } = use(props.params);
   const toast = useToast();
-  const [apiKeys, setApiKeys] = useState<ApiKey[]>([]);
-  const [credentials, setCredentials] = useState<Credentials | null>(null);
-  const [metrics, setMetrics] = useState<Metrics | null>(null);
-  const [loading, setLoading] = useState(true);
+  const apiKeys = useApiKeys(id);
+  const credentials = useCredentials(id);
+  const metrics = useMetrics(id);
+  const createApiKey = useCreateApiKey(id);
+  const revokeApiKey = useRevokeApiKey(id);
   const [newKey, setNewKey] = useState<string | null>(null);
 
-  useEffect(() => {
-    refresh();
-  }, [id]);
-
-  async function refresh() {
-    setLoading(true);
-    try {
-      const [keys, creds, met] = await Promise.all([
-        api.listApiKeys(id),
-        api.getCredentials(id),
-        api.getMetrics(id),
-      ]);
-      setApiKeys(keys.data);
-      setCredentials(creds);
-      setMetrics(met);
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setLoading(false);
-    }
-  }
+  const loading =
+    apiKeys.isLoading || credentials.isLoading || metrics.isLoading;
 
   async function handleCreateKey() {
     const label = prompt("Label for this API key?", "default");
     if (!label) return;
     try {
-      const result = await api.createApiKey(id, label);
+      const result = await createApiKey.mutateAsync(label);
       setNewKey(result.apiKey);
       toast.success("API key created. Copy it now.");
-      await refresh();
     } catch (err) {
-      toast.error(
-        err instanceof Error ? err.message : "Failed to create key",
-      );
+      toast.error(err instanceof Error ? err.message : "Failed to create key");
     }
   }
 
   async function handleRevokeKey(keyId: string) {
-    if (!confirm("Revoke this API key? Apps using it will stop working.")) return;
+    if (!confirm("Revoke this API key? Apps using it will stop working."))
+      return;
     try {
-      await api.revokeApiKey(id, keyId);
+      await revokeApiKey.mutateAsync(keyId);
       toast.success("API key revoked");
-      await refresh();
     } catch (err) {
-      toast.error(
-        err instanceof Error ? err.message : "Failed to revoke key",
-      );
+      toast.error(err instanceof Error ? err.message : "Failed to revoke key");
     }
   }
 
@@ -144,36 +93,36 @@ export default function AppDetailPage(props: {
       ) : (
         <>
           {/* Metrics */}
-          {metrics && metrics.total > 0 && (
+          {metrics.data && metrics.data.total > 0 && (
             <section className="mb-12">
               <h2 className="text-xl font-semibold mb-4">Last 7 days</h2>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
                 <Stat
                   label="Sent"
-                  value={metrics.last7.total.toLocaleString()}
+                  value={metrics.data.last7.total.toLocaleString()}
                 />
                 <Stat
                   label="Delivered"
-                  value={metrics.last7.delivered.toLocaleString()}
+                  value={metrics.data.last7.delivered.toLocaleString()}
                   sublabel={
-                    metrics.last7.total > 0
-                      ? `${((metrics.last7.delivered / metrics.last7.total) * 100).toFixed(1)}%`
+                    metrics.data.last7.total > 0
+                      ? `${((metrics.data.last7.delivered / metrics.data.last7.total) * 100).toFixed(1)}%`
                       : undefined
                   }
                   color="text-emerald-300"
                 />
                 <Stat
                   label="Failed"
-                  value={metrics.last7.failed.toLocaleString()}
+                  value={metrics.data.last7.failed.toLocaleString()}
                   color="text-red-300"
                 />
                 <Stat
                   label="Inflight"
-                  value={metrics.inflight.toLocaleString()}
+                  value={metrics.data.inflight.toLocaleString()}
                   color="text-blue-300"
                 />
               </div>
-              <DailyChart data={metrics.daily} />
+              <DailyChart data={metrics.data.daily} />
             </section>
           )}
 
@@ -188,13 +137,13 @@ export default function AppDetailPage(props: {
                 New key
               </button>
             </div>
-            {apiKeys.length === 0 ? (
+            {!apiKeys.data || apiKeys.data.length === 0 ? (
               <div className="border border-dashed border-white/10 rounded-xl p-8 text-center text-sm text-zinc-500">
                 No API keys. Create one to start sending pushes.
               </div>
             ) : (
               <div className="space-y-2">
-                {apiKeys.map((k) => (
+                {apiKeys.data.map((k) => (
                   <div
                     key={k.id}
                     className="border border-white/10 rounded-lg p-4 flex items-center justify-between"
@@ -226,20 +175,20 @@ export default function AppDetailPage(props: {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <CredentialCard
                 title="APNs (iOS)"
-                configured={!!credentials?.apns}
+                configured={!!credentials.data?.apns}
                 details={
-                  credentials?.apns
-                    ? `${credentials.apns.bundleId} | ${credentials.apns.production ? "production" : "sandbox"}`
+                  credentials.data?.apns
+                    ? `${credentials.data.apns.bundleId} | ${credentials.data.apns.production ? "production" : "sandbox"}`
                     : "Not configured"
                 }
                 href={`/dashboard/apps/${id}/credentials/apns`}
               />
               <CredentialCard
                 title="FCM (Android)"
-                configured={!!credentials?.fcm}
+                configured={!!credentials.data?.fcm}
                 details={
-                  credentials?.fcm
-                    ? credentials.fcm.projectId
+                  credentials.data?.fcm
+                    ? credentials.data.fcm.projectId
                     : "Not configured"
                 }
                 href={`/dashboard/apps/${id}/credentials/fcm`}

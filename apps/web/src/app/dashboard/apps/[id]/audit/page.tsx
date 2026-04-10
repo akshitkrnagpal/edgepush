@@ -1,16 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { use, useEffect, useState } from "react";
+import { use } from "react";
 
-import { api } from "@/lib/api";
-
-interface AuditEntry {
-  id: string;
-  action: string;
-  metadata: Record<string, unknown> | null;
-  createdAt: number;
-}
+import { useAuditLog } from "@/lib/queries";
 
 const ACTION_LABELS: Record<string, string> = {
   "app.created": "App created",
@@ -28,15 +21,7 @@ export default function AuditPage(props: {
   params: Promise<{ id: string }>;
 }) {
   const { id } = use(props.params);
-  const [entries, setEntries] = useState<AuditEntry[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    api
-      .listAuditLog(id)
-      .then((result) => setEntries(result.data))
-      .finally(() => setLoading(false));
-  }, [id]);
+  const entries = useAuditLog(id);
 
   return (
     <div className="max-w-4xl mx-auto px-6 py-12">
@@ -52,15 +37,15 @@ export default function AuditPage(props: {
         Audit trail of credential changes and API key activity for this app.
       </p>
 
-      {loading ? (
+      {entries.isLoading ? (
         <p className="text-sm text-zinc-500">Loading...</p>
-      ) : entries.length === 0 ? (
+      ) : !entries.data || entries.data.length === 0 ? (
         <div className="border border-dashed border-white/10 rounded-xl p-12 text-center text-sm text-zinc-500">
           No activity yet.
         </div>
       ) : (
         <div className="space-y-2">
-          {entries.map((entry) => (
+          {entries.data.map((entry) => (
             <div
               key={entry.id}
               className="border border-white/10 rounded-lg p-4"

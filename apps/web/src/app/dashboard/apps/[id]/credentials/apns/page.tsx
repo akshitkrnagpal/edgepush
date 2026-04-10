@@ -4,27 +4,26 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { use, useState } from "react";
 
-import { api } from "@/lib/api";
+import { useUploadApns } from "@/lib/queries";
 
 export default function ApnsCredentialsPage(props: {
   params: Promise<{ id: string }>;
 }) {
   const { id } = use(props.params);
   const router = useRouter();
+  const uploadApns = useUploadApns(id);
   const [keyId, setKeyId] = useState("");
   const [teamId, setTeamId] = useState("");
   const [bundleId, setBundleId] = useState("");
   const [privateKey, setPrivateKey] = useState("");
   const [production, setProduction] = useState(true);
-  const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
-    setSaving(true);
     try {
-      await api.uploadApns(id, {
+      await uploadApns.mutateAsync({
         keyId,
         teamId,
         bundleId,
@@ -34,8 +33,6 @@ export default function ApnsCredentialsPage(props: {
       router.push(`/dashboard/apps/${id}`);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to save");
-    } finally {
-      setSaving(false);
     }
   }
 
@@ -128,10 +125,10 @@ export default function ApnsCredentialsPage(props: {
         <div className="flex items-center gap-3 pt-4">
           <button
             type="submit"
-            disabled={saving}
+            disabled={uploadApns.isPending}
             className="rounded-lg bg-white text-black px-4 py-2 text-sm font-medium hover:bg-zinc-200 disabled:opacity-50"
           >
-            {saving ? "Saving..." : "Save credentials"}
+            {uploadApns.isPending ? "Saving..." : "Save credentials"}
           </button>
           <Link
             href={`/dashboard/apps/${id}`}
