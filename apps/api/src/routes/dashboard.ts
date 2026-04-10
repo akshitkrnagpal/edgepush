@@ -13,9 +13,12 @@ import {
   apiKeys,
   apnsCredentials,
   apps,
+  auditLog,
   fcmCredentials,
   messages,
+  webhooks,
 } from "../db/schema";
+import { logAudit } from "../lib/audit";
 import {
   encryptCredential,
   generateId,
@@ -77,6 +80,16 @@ dashboardRouter.post("/apps", async (c) => {
     createdAt: Date.now(),
   });
 
+  await logAudit(c.var.db, {
+    appId: id,
+    userId: user.id,
+    action: "app.created",
+    metadata: {
+      name: parseResult.data.name,
+      packageName: parseResult.data.packageName,
+    },
+  });
+
   return c.json({ id });
 });
 
@@ -85,7 +98,8 @@ dashboardRouter.delete("/apps/:id", async (c) => {
   if (!user) return c.json({ error: "unauthorized" }, 401);
 
   const id = c.req.param("id");
-  const result = await c.var.db
+  // Note: audit log rows cascade-delete with the app
+  await c.var.db
     .delete(apps)
     .where(and(eq(apps.id, id), eq(apps.userId, user.id)));
 
@@ -157,6 +171,13 @@ dashboardRouter.post("/apps/:id/api-keys", async (c) => {
     createdAt: Date.now(),
   });
 
+  await logAudit(c.var.db, {
+    appId,
+    userId: user.id,
+    action: "api_key.created",
+    metadata: { keyId: id, label },
+  });
+
   // The raw key is shown ONCE, right after creation. It's not stored.
   return c.json({ id, apiKey: rawKey, preview, label });
 });
@@ -181,6 +202,13 @@ dashboardRouter.post("/apps/:id/api-keys/:keyId/revoke", async (c) => {
     .update(apiKeys)
     .set({ revokedAt: Date.now() })
     .where(and(eq(apiKeys.id, keyId), eq(apiKeys.appId, appId)));
+
+  await logAudit(c.var.db, {
+    appId,
+    userId: user.id,
+    action: "api_key.revoked",
+    metadata: { keyId },
+  });
 
   return c.json({ ok: true });
 });
@@ -243,6 +271,17 @@ dashboardRouter.put("/apps/:id/credentials/apns", async (c) => {
       },
     });
 
+  await logAudit(c.var.db, {
+    appId,
+    userId: user.id,
+    action: "apns.updated",
+    metadata: {
+      keyId: parseResult.data.keyId,
+      bundleId: parseResult.data.bundleId,
+      production: parseResult.data.production,
+    },
+  });
+
   return c.json({ ok: true });
 });
 
@@ -260,6 +299,13 @@ dashboardRouter.delete("/apps/:id/credentials/apns", async (c) => {
   if (!app) return c.json({ error: "not_found" }, 404);
 
   await c.var.db.delete(apnsCredentials).where(eq(apnsCredentials.appId, appId));
+
+  await logAudit(c.var.db, {
+    appId,
+    userId: user.id,
+    action: "apns.deleted",
+  });
+
   return c.json({ ok: true });
 });
 
@@ -319,6 +365,13 @@ dashboardRouter.put("/apps/:id/credentials/fcm", async (c) => {
       },
     });
 
+  await logAudit(c.var.db, {
+    appId,
+    userId: user.id,
+    action: "fcm.updated",
+    metadata: { projectId: parseResult.data.projectId },
+  });
+
   return c.json({ ok: true });
 });
 
@@ -336,6 +389,13 @@ dashboardRouter.delete("/apps/:id/credentials/fcm", async (c) => {
   if (!app) return c.json({ error: "not_found" }, 404);
 
   await c.var.db.delete(fcmCredentials).where(eq(fcmCredentials.appId, appId));
+
+  await logAudit(c.var.db, {
+    appId,
+    userId: user.id,
+    action: "fcm.deleted",
+  });
+
   return c.json({ ok: true });
 });
 
@@ -415,4 +475,158 @@ dashboardRouter.get("/apps/:id/messages", async (c) => {
     .limit(100);
 
   return c.json({ data: rows });
+});
+
+// --- Webhooks ---
+
+const WebhookSchema = z.object({
+  url: z.string().url(),
+  enabled: z.boolean().default(true).optional(),
+});
+
+dashboardRouter.get("/apps/:id/webhook", async (c) => {
+  const user = await getSessionUser(c);
+  if (!user) return c.json({ error: "unauthorized" }, 401);
+
+  const appId = c.req.param("id");
+  const app = await c.var.db
+    .select()
+    .from(apps)
+    .where(and(eq(apps.id, appId), eq(apps.userId, user.id)))
+    .limit(1)
+    .then((rows) => rows[0] ?? null);
+  if (!app) return c.json({ error: "not_found" }, 404);
+
+  const row = await c.var.db
+    .select({
+      url: webhooks.url,
+      enabled: webhooks.enabled,
+      updatedAt: webhooks.updatedAt,
+    })
+    .from(webhooks)
+    .where(eq(webhooks.appId, appId))
+    .limit(1)
+    .then((rows) => rows[0] ?? null);
+
+  return c.json(row);
+});
+
+dashboardRouter.put("/apps/:id/webhook", async (c) => {
+  const user = await getSessionUser(c);
+  if (!user) return c.json({ error: "unauthorized" }, 401);
+
+  const appId = c.req.param("id");
+  const app = await c.var.db
+    .select()
+    .from(apps)
+    .where(and(eq(apps.id, appId), eq(apps.userId, user.id)))
+    .limit(1)
+    .then((rows) => rows[0] ?? null);
+  if (!app) return c.json({ error: "not_found" }, 404);
+
+  const parseResult = WebhookSchema.safeParse(await c.req.json());
+  if (!parseResult.success) {
+    return c.json({ error: "invalid_request", issues: parseResult.error.issues }, 400);
+  }
+
+  // Check if already exists to decide whether to generate a new secret
+  const existing = await c.var.db
+    .select()
+    .from(webhooks)
+    .where(eq(webhooks.appId, appId))
+    .limit(1)
+    .then((rows) => rows[0] ?? null);
+
+  const secret = existing?.secret ?? generateSecret();
+  const now = Date.now();
+
+  await c.var.db
+    .insert(webhooks)
+    .values({
+      appId,
+      url: parseResult.data.url,
+      secret,
+      enabled: parseResult.data.enabled ?? true,
+      createdAt: existing?.createdAt ?? now,
+      updatedAt: now,
+    })
+    .onConflictDoUpdate({
+      target: webhooks.appId,
+      set: {
+        url: parseResult.data.url,
+        enabled: parseResult.data.enabled ?? true,
+        updatedAt: now,
+      },
+    });
+
+  await logAudit(c.var.db, {
+    appId,
+    userId: user.id,
+    action: "webhook.updated",
+    metadata: { url: parseResult.data.url, enabled: parseResult.data.enabled },
+  });
+
+  // Return the secret only if it's brand new (so the user can save it)
+  return c.json({
+    ok: true,
+    secret: existing ? undefined : secret,
+  });
+});
+
+dashboardRouter.delete("/apps/:id/webhook", async (c) => {
+  const user = await getSessionUser(c);
+  if (!user) return c.json({ error: "unauthorized" }, 401);
+
+  const appId = c.req.param("id");
+  const app = await c.var.db
+    .select()
+    .from(apps)
+    .where(and(eq(apps.id, appId), eq(apps.userId, user.id)))
+    .limit(1)
+    .then((rows) => rows[0] ?? null);
+  if (!app) return c.json({ error: "not_found" }, 404);
+
+  await c.var.db.delete(webhooks).where(eq(webhooks.appId, appId));
+  await logAudit(c.var.db, {
+    appId,
+    userId: user.id,
+    action: "webhook.deleted",
+  });
+
+  return c.json({ ok: true });
+});
+
+// --- Audit log ---
+
+dashboardRouter.get("/apps/:id/audit", async (c) => {
+  const user = await getSessionUser(c);
+  if (!user) return c.json({ error: "unauthorized" }, 401);
+
+  const appId = c.req.param("id");
+  const app = await c.var.db
+    .select()
+    .from(apps)
+    .where(and(eq(apps.id, appId), eq(apps.userId, user.id)))
+    .limit(1)
+    .then((rows) => rows[0] ?? null);
+  if (!app) return c.json({ error: "not_found" }, 404);
+
+  const rows = await c.var.db
+    .select({
+      id: auditLog.id,
+      action: auditLog.action,
+      metadata: auditLog.metadata,
+      createdAt: auditLog.createdAt,
+    })
+    .from(auditLog)
+    .where(eq(auditLog.appId, appId))
+    .orderBy(desc(auditLog.createdAt))
+    .limit(100);
+
+  return c.json({
+    data: rows.map((r) => ({
+      ...r,
+      metadata: r.metadata ? JSON.parse(r.metadata) : null,
+    })),
+  });
 });

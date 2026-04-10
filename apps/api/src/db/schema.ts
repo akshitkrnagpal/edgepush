@@ -177,3 +177,57 @@ export const messages = sqliteTable(
     byAppStatus: index("messages_by_app_status").on(table.appId, table.status),
   }),
 );
+
+/**
+ * Webhook configuration per app. When a message status changes to
+ * delivered, failed, or expired, edgepush POSTs the receipt to the
+ * configured webhook URL with an HMAC signature header.
+ */
+export const webhooks = sqliteTable("webhooks", {
+  appId: text("app_id")
+    .primaryKey()
+    .references(() => apps.id, { onDelete: "cascade" }),
+  url: text("url").notNull(),
+  /** HMAC secret used to sign outbound webhook bodies. */
+  secret: text("secret").notNull(),
+  enabled: integer("enabled", { mode: "boolean" }).notNull().default(true),
+  createdAt: integer("created_at", { mode: "number" }).notNull(),
+  updatedAt: integer("updated_at", { mode: "number" }).notNull(),
+});
+
+/**
+ * Activity log for credential changes, API key creation/revocation, and
+ * webhook updates. One row per sensitive action.
+ */
+export const auditLog = sqliteTable(
+  "audit_log",
+  {
+    id: text("id").primaryKey(),
+    appId: text("app_id")
+      .notNull()
+      .references(() => apps.id, { onDelete: "cascade" }),
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    action: text("action", {
+      enum: [
+        "app.created",
+        "app.deleted",
+        "api_key.created",
+        "api_key.revoked",
+        "apns.updated",
+        "apns.deleted",
+        "fcm.updated",
+        "fcm.deleted",
+        "webhook.updated",
+        "webhook.deleted",
+      ],
+    }).notNull(),
+    /** Optional additional context, JSON-encoded. */
+    metadata: text("metadata"),
+    createdAt: integer("created_at", { mode: "number" }).notNull(),
+  },
+  (table) => ({
+    byApp: index("audit_log_by_app").on(table.appId, table.createdAt),
+  }),
+);

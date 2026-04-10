@@ -6,6 +6,7 @@
  *   2. Load the app's APNs or FCM credentials (decrypt on the fly)
  *   3. POST to APNs or FCM
  *   4. Update the message row with the result
+ *   5. Fire a webhook if the app has one configured
  *
  * Queue retries: if dispatch throws, the message remains in the queue and
  * Cloudflare retries with exponential backoff up to max_retries.
@@ -15,8 +16,14 @@ import { eq, inArray } from "drizzle-orm";
 
 import type { PushMessage } from "@edgepush/shared";
 import { createDb } from "./db";
-import { apnsCredentials, fcmCredentials, messages } from "./db/schema";
+import {
+  apnsCredentials,
+  fcmCredentials,
+  messages,
+  webhooks,
+} from "./db/schema";
 import { decryptCredential } from "./lib/crypto";
+import { dispatchWebhook, type WebhookPayload } from "./lib/webhook";
 import { dispatchApns } from "./push/apns";
 import { dispatchFcm } from "./push/fcm";
 import type { DispatchJob, Env } from "./types";
@@ -67,10 +74,16 @@ async function processAppBatch(
   const hasIos = rows.some((r) => r.platform === "ios");
   const hasAndroid = rows.some((r) => r.platform === "android");
 
-  const apnsCreds = hasIos
-    ? await loadApnsCredentials(db, env, appId)
-    : null;
+  const apnsCreds = hasIos ? await loadApnsCredentials(db, env, appId) : null;
   const fcmCreds = hasAndroid ? await loadFcmCredentials(db, env, appId) : null;
+
+  // Load webhook once per batch (may be null if not configured)
+  const webhook = await db
+    .select()
+    .from(webhooks)
+    .where(eq(webhooks.appId, appId))
+    .limit(1)
+    .then((rows) => rows[0] ?? null);
 
   for (const job of jobs) {
     const row = rowById.get(job.body.messageId);
@@ -108,15 +121,34 @@ async function processAppBatch(
       };
     }
 
+    const nextStatus = result.ok ? "delivered" : "failed";
     await db
       .update(messages)
       .set({
-        status: result.ok ? "delivered" : "failed",
+        status: nextStatus,
         error: result.error ?? null,
         tokenInvalid: result.tokenInvalid ?? false,
         updatedAt: Date.now(),
       })
       .where(eq(messages.id, row.id));
+
+    // Fire webhook if configured and enabled
+    if (webhook?.enabled) {
+      const payload: WebhookPayload = {
+        event: nextStatus === "delivered" ? "message.delivered" : "message.failed",
+        messageId: row.id,
+        appId,
+        status: nextStatus,
+        error: result.error ?? null,
+        tokenInvalid: result.tokenInvalid ?? false,
+        timestamp: Date.now(),
+      };
+      try {
+        await dispatchWebhook(webhook.url, webhook.secret, payload);
+      } catch (err) {
+        console.error(`[dispatch] webhook failed for ${row.id}:`, err);
+      }
+    }
 
     job.ack();
   }
