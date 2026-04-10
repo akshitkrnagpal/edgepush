@@ -8,7 +8,7 @@
 
   // Environment variables set via `wrangler secret put`
   "vars": {
-    "BETTER_AUTH_URL": "https://edgepush-api.workers.dev"
+    "BETTER_AUTH_URL": "https://edgepush-api.nagpalkrakshit.workers.dev"
   },
 
   // D1 database for tenants, apps, tokens, receipts, push credentials
@@ -16,7 +16,7 @@
     {
       "binding": "DB",
       "database_name": "edgepush",
-      "database_id": "00000000-0000-0000-0000-000000000000",
+      "database_id": "33dc63eb-f54e-49bb-a91e-0f24ddcda721",
       "migrations_dir": "migrations"
     }
   ],
@@ -25,7 +25,7 @@
   "kv_namespaces": [
     {
       "binding": "CACHE",
-      "id": "00000000000000000000000000000000"
+      "id": "a97336dff01c482ea90acdf4aac4233e"
     }
   ],
 
