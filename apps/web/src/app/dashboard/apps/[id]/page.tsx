@@ -3,6 +3,7 @@
 import { use, useEffect, useState } from "react";
 import Link from "next/link";
 
+import { useToast } from "@/components/toast";
 import { api } from "@/lib/api";
 
 interface ApiKey {
@@ -43,6 +44,7 @@ export default function AppDetailPage(props: {
   params: Promise<{ id: string }>;
 }) {
   const { id } = use(props.params);
+  const toast = useToast();
   const [apiKeys, setApiKeys] = useState<ApiKey[]>([]);
   const [credentials, setCredentials] = useState<Credentials | null>(null);
   const [metrics, setMetrics] = useState<Metrics | null>(null);
@@ -77,9 +79,12 @@ export default function AppDetailPage(props: {
     try {
       const result = await api.createApiKey(id, label);
       setNewKey(result.apiKey);
+      toast.success("API key created. Copy it now.");
       await refresh();
     } catch (err) {
-      alert(err instanceof Error ? err.message : "Failed to create key");
+      toast.error(
+        err instanceof Error ? err.message : "Failed to create key",
+      );
     }
   }
 
@@ -87,9 +92,12 @@ export default function AppDetailPage(props: {
     if (!confirm("Revoke this API key? Apps using it will stop working.")) return;
     try {
       await api.revokeApiKey(id, keyId);
+      toast.success("API key revoked");
       await refresh();
     } catch (err) {
-      alert(err instanceof Error ? err.message : "Failed to revoke key");
+      toast.error(
+        err instanceof Error ? err.message : "Failed to revoke key",
+      );
     }
   }
 
