@@ -6,10 +6,17 @@
   "compatibility_flags": ["nodejs_compat"],
   "workers_dev": true,
 
+  // API gets its own subdomain. Custom domain auto-creates the DNS record.
+  // Cookies are scoped to .edgepush.dev so the dashboard at edgepush.dev
+  // can include them when calling api.edgepush.dev (same-site).
+  "routes": [
+    { "pattern": "api.edgepush.dev", "custom_domain": true }
+  ],
+
   // Environment variables set via `wrangler secret put`
   "vars": {
-    "BETTER_AUTH_URL": "https://edgepush-api.nagpalkrakshit.workers.dev",
-    "DASHBOARD_URL": "https://edgepush-web.nagpalkrakshit.workers.dev"
+    "BETTER_AUTH_URL": "https://api.edgepush.dev",
+    "DASHBOARD_URL": "https://edgepush.dev"
   },
 
   // D1 database for tenants, apps, tokens, receipts, push credentials

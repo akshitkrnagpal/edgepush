@@ -4,11 +4,18 @@
   "name": "edgepush-web",
   "compatibility_date": "2026-04-10",
   "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
+  "workers_dev": true,
+  // Dashboard owns the apex via custom domain (auto-creates DNS).
+  // API lives at api.edgepush.dev as a separate worker.
+  "routes": [
+    { "pattern": "edgepush.dev", "custom_domain": true },
+    { "pattern": "www.edgepush.dev", "custom_domain": true }
+  ],
   "assets": {
     "directory": ".open-next/assets",
     "binding": "ASSETS"
   },
   "vars": {
-    "NEXT_PUBLIC_API_URL": "https://edgepush-api.nagpalkrakshit.workers.dev"
+    "NEXT_PUBLIC_API_URL": "https://api.edgepush.dev"
   }
 }

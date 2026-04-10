@@ -18,6 +18,11 @@ export function createAuth(env: Env) {
   const db = createDb(env.DB);
   const dashboardUrl = env.DASHBOARD_URL ?? env.BETTER_AUTH_URL;
 
+  // If both API and dashboard share an eTLD+1, scope cookies to the
+  // shared parent so the dashboard can include them in cross-subdomain
+  // fetches with credentials.
+  const cookieDomain = getSharedDomain(env.BETTER_AUTH_URL, dashboardUrl);
+
   return betterAuth({
     appName: "edgepush",
     baseURL: env.BETTER_AUTH_URL,
@@ -31,6 +36,18 @@ export function createAuth(env: Env) {
         verification: schema.verification,
       },
     }),
+    advanced: cookieDomain
+      ? {
+          crossSubDomainCookies: {
+            enabled: true,
+            domain: cookieDomain,
+          },
+          defaultCookieAttributes: {
+            sameSite: "lax",
+            secure: true,
+          },
+        }
+      : undefined,
     emailAndPassword: {
       enabled: true,
       requireEmailVerification: false,
@@ -75,3 +92,28 @@ export function createAuth(env: Env) {
 }
 
 export type Auth = ReturnType<typeof createAuth>;
+
+/**
+ * If both URLs share an eTLD+1 like edgepush.dev, return ".edgepush.dev"
+ * so cookies are scoped to the parent and shared across subdomains.
+ * Returns null if the URLs don't share a parent or one is missing.
+ */
+function getSharedDomain(a?: string, b?: string): string | null {
+  if (!a || !b) return null;
+  try {
+    const ha = new URL(a).hostname;
+    const hb = new URL(b).hostname;
+    if (ha === hb) return null;
+    // Strip leading subdomain
+    const parts = (host: string) => host.split(".");
+    const pa = parts(ha);
+    const pb = parts(hb);
+    // Get the last 2 labels of each (eTLD+1 approximation, fine for .dev / .com)
+    const eTLDa = pa.slice(-2).join(".");
+    const eTLDb = pb.slice(-2).join(".");
+    if (eTLDa !== eTLDb) return null;
+    return `.${eTLDa}`;
+  } catch {
+    return null;
+  }
+}
