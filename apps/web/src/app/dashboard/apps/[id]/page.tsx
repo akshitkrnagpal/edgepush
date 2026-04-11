@@ -540,7 +540,7 @@ function StatusFilter({
 function StatusDot({ status }: { status: string }) {
   let dot = "●";
   let color = "text-muted-strong";
-  let label = status;
+  const label = status;
   if (status === "delivered") {
     color = "text-success";
   } else if (status === "failed" || status === "expired") {
