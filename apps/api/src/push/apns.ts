@@ -77,6 +77,7 @@ export async function dispatchApns(
         ? "time-sensitive"
         : undefined,
       "content-available": message.contentAvailable ? 1 : undefined,
+      "mutable-content": message.mutableContent ? 1 : undefined,
     },
   };
 
@@ -87,21 +88,38 @@ export async function dispatchApns(
     }
   }
 
-  // Merge custom data
+  // Image URL goes in the custom data block where the Notification Service
+  // Extension reads it from. Standard convention name is "image".
+  if (message.image) {
+    payload.image = message.image;
+  }
+
+  // Merge custom data (after image so user data wins on key collision).
   if (message.data) {
     for (const [k, v] of Object.entries(message.data)) {
       if (k !== "aps") payload[k] = v;
     }
   }
 
+  // Default push type follows the legacy "background if content-available,
+  // otherwise alert" rule. Caller can override for voip / location / etc.
+  const defaultPushType = message.contentAvailable ? "background" : "alert";
   const headers: Record<string, string> = {
     authorization: `bearer ${jwt}`,
     "apns-topic": creds.bundleId,
-    "apns-push-type": message.contentAvailable ? "background" : "alert",
+    "apns-push-type": message.pushType ?? defaultPushType,
     "apns-priority": message.priority === "normal" ? "5" : "10",
   };
 
-  if (message.ttl !== undefined) {
+  if (message.collapseId) {
+    headers["apns-collapse-id"] = message.collapseId;
+  }
+
+  // expirationAt (absolute) wins over ttl (relative). Either one drops the
+  // notification once the deadline passes. Omit both to let APNs decide.
+  if (message.expirationAt !== undefined) {
+    headers["apns-expiration"] = String(message.expirationAt);
+  } else if (message.ttl !== undefined) {
     headers["apns-expiration"] = String(
       Math.floor(Date.now() / 1000) + message.ttl,
     );

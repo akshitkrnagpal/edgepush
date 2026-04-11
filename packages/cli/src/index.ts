@@ -60,12 +60,22 @@ Usage:
   edgepush --help                             Show this help
 
 Send options:
-  --title <text>        Notification title
-  --body <text>         Notification body
+  --title <text>            Notification title
+  --body <text>             Notification body
   --platform <ios|android>  Override auto-detection
-  --sound <name>        Sound name or "default"
-  --badge <n>           iOS badge count
-  --data <json>         JSON-encoded custom data
+  --sound <name>            Sound name or "default"
+  --badge <n>               iOS badge count
+  --data <json>             JSON-encoded custom data
+  --image <url>             Image URL (rich notification, needs NSE on iOS)
+  --collapse-id <id>        Collapse key (max 64 bytes)
+  --priority <high|normal>  Delivery priority (default high)
+  --ttl <seconds>           Time-to-live in seconds
+  --expiration-at <unix>    Absolute Unix expiration timestamp (overrides ttl)
+  --push-type <type>        APNs push type: alert, background, voip, location,
+                            complication, fileprovider, mdm
+  --mutable-content         Set iOS aps[mutable-content] = 1 (rich images)
+  --content-available       Set iOS aps[content-available] = 1 (silent push)
+  --time-sensitive          iOS time-sensitive interruption level
 
 Environment variables:
   EDGEPUSH_API_KEY      Override the saved API key
@@ -138,6 +148,31 @@ async function cmdSend(args: ParsedArgs): Promise<void> {
     }
   }
 
+  const validPushTypes = new Set([
+    "alert",
+    "background",
+    "voip",
+    "location",
+    "complication",
+    "fileprovider",
+    "mdm",
+  ]);
+  const pushTypeFlag =
+    typeof args.flags["push-type"] === "string"
+      ? args.flags["push-type"]
+      : undefined;
+  if (pushTypeFlag && !validPushTypes.has(pushTypeFlag)) {
+    console.error(
+      `--push-type must be one of: ${[...validPushTypes].join(", ")}`,
+    );
+    process.exit(1);
+  }
+
+  const priorityFlag =
+    args.flags.priority === "high" || args.flags.priority === "normal"
+      ? args.flags.priority
+      : undefined;
+
   const client = new Edgepush({ apiKey, baseURL });
 
   try {
@@ -159,6 +194,32 @@ async function cmdSend(args: ParsedArgs): Promise<void> {
           ? Number(args.flags.badge)
           : undefined,
       data,
+      image: typeof args.flags.image === "string" ? args.flags.image : undefined,
+      collapseId:
+        typeof args.flags["collapse-id"] === "string"
+          ? args.flags["collapse-id"]
+          : undefined,
+      priority: priorityFlag,
+      ttl:
+        typeof args.flags.ttl === "string" ? Number(args.flags.ttl) : undefined,
+      expirationAt:
+        typeof args.flags["expiration-at"] === "string"
+          ? Number(args.flags["expiration-at"])
+          : undefined,
+      pushType: pushTypeFlag as
+        | "alert"
+        | "background"
+        | "voip"
+        | "location"
+        | "complication"
+        | "fileprovider"
+        | "mdm"
+        | undefined,
+      mutableContent: args.flags["mutable-content"] === true ? true : undefined,
+      contentAvailable:
+        args.flags["content-available"] === true ? true : undefined,
+      timeSensitive:
+        args.flags["time-sensitive"] === true ? true : undefined,
     });
     console.log(JSON.stringify(ticket, null, 2));
   } catch (err) {

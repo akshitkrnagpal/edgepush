@@ -9,7 +9,7 @@ export default function Home() {
           <span>
             <span className="text-accent">●</span> edgepush.dev
           </span>
-          <span>v0.1.0 · alpha</span>
+          <span>v0.2 · alpha</span>
           <a
             href="https://github.com/akshitkrnagpal/edgepush"
             target="_blank"
@@ -18,7 +18,7 @@ export default function Home() {
           >
             github.com/akshitkrnagpal/edgepush
           </a>
-          <span className="ml-auto hidden sm:inline">mit licensed</span>
+          <span className="ml-auto hidden sm:inline">agpl-3.0 + mit dual</span>
           <span className="hidden sm:inline">
             <span className="text-success">●</span> live
           </span>
@@ -116,7 +116,7 @@ export default function Home() {
           </div>
           <div className="flex flex-wrap gap-5 font-mono text-[11px] text-muted">
             <span>
-              <span className="text-accent">●</span> mit licensed
+              <span className="text-accent">●</span> agpl + mit
             </span>
             <span>
               <span className="text-accent">●</span> byo credentials
@@ -125,7 +125,7 @@ export default function Home() {
               <span className="text-accent">●</span> native tokens
             </span>
             <span>
-              <span className="text-accent">●</span> one-command deploy
+              <span className="text-accent">●</span> rich notifications
             </span>
           </div>
         </div>
@@ -146,16 +146,20 @@ export default function Home() {
           <pre className="overflow-x-auto p-5 text-text whitespace-pre">
             <code>
               <span className="text-muted">
-                {"// one api. native apns + fcm. no lock-in."}
+                {"// rich notification, collapse-id, expiration."}
               </span>
               {"\n"}
+              <span className="text-muted">
+                {"// the full APNs surface, on a single line per field."}
+              </span>
+              {"\n\n"}
               <span className="text-accent">import</span>{" "}
               <span className="text-muted-strong">{"{ Edgepush }"}</span>{" "}
               <span className="text-accent">from</span>{" "}
               <span className="text-text">{'"@edgepush/sdk"'}</span>
               {";\n\n"}
               <span className="text-accent">const</span>{" "}
-              <span className="text-muted-strong">client</span>
+              <span className="text-muted-strong">edge</span>
               {" = "}
               <span className="text-accent">new</span> Edgepush({"{"}
               {"\n  "}
@@ -164,33 +168,45 @@ export default function Home() {
               <span className="text-muted-strong">EDGEPUSH_API_KEY</span>
               {",\n"}
               {"});\n\n"}
-              <span className="text-accent">const</span>{" "}
-              <span className="text-muted-strong">ticket</span>
-              {" = "}
               <span className="text-accent">await</span>{" "}
-              <span className="text-muted-strong">client</span>.send({"{"}
+              <span className="text-muted-strong">edge</span>.send({"{"}
               {"\n  "}
               <span className="text-muted-strong">to</span>
-              {":    "}
+              {":              "}
               <span className="text-text">{'"a1b2c3d4…"'}</span>
-              {",  "}
-              <span className="text-muted">{"// apns or fcm token"}</span>
-              {"\n  "}
+              {",\n  "}
               <span className="text-muted-strong">title</span>
-              {": "}
-              <span className="text-text">{'"Build passed"'}</span>
+              {":           "}
+              <span className="text-text">{'"New order #4271"'}</span>
               {",\n  "}
               <span className="text-muted-strong">body</span>
-              {":  "}
-              <span className="text-text">{'"Deploy to prod is live."'}</span>
+              {":            "}
+              <span className="text-text">{'"2x flat white, table 3"'}</span>
               {",\n  "}
-              <span className="text-muted-strong">data</span>
-              {":  { "}
-              <span className="text-muted-strong">url</span>
-              {": "}
-              <span className="text-text">{'"/deploys/abc123"'}</span>
-              {" },\n"}
-              {"});\n\n"}
+              <span className="text-muted-strong">image</span>
+              {":           "}
+              <span className="text-text">{'"https://cdn.acme.app/o/4271.jpg"'}</span>
+              {",\n  "}
+              <span className="text-muted-strong">mutableContent</span>
+              {":  "}
+              <span className="text-accent">true</span>
+              {",  "}
+              <span className="text-muted">{"// iOS NSE"}</span>
+              {"\n  "}
+              <span className="text-muted-strong">collapseId</span>
+              {":      "}
+              <span className="text-text">{'"order-4271"'}</span>
+              {",  "}
+              <span className="text-muted">{"// replace prior"}</span>
+              {"\n  "}
+              <span className="text-muted-strong">expirationAt</span>
+              {":    "}
+              <span className="text-muted-strong">Date</span>
+              {".now() / "}
+              <span className="text-text">1000</span>
+              {" + "}
+              <span className="text-text">600</span>
+              {",\n});\n\n"}
               <span className="text-muted">
                 {"// → ticket.id: tk_01HX2A9P4M  "}
                 <span className="text-success">●</span>
@@ -585,6 +601,34 @@ export default function Home() {
                 values={["yes", "no (proprietary)", "yes", "yes"]}
               />
               <CompareRow
+                label="rich notifications (images)"
+                values={["yes", "no", "yes", "yes"]}
+              />
+              <CompareRow
+                label="apns collapse-id"
+                values={["yes", "no", "yes", "yes"]}
+              />
+              <CompareRow
+                label="fine-grained apns push types (voip, location, ...)"
+                values={["yes", "no", "partial", "partial"]}
+              />
+              <CompareRow
+                label="reliable silent / background push"
+                values={["yes", "best effort", "yes", "yes"]}
+              />
+              <CompareRow
+                label="absolute notification expiration"
+                values={["yes", "no", "yes", "yes"]}
+              />
+              <CompareRow
+                label="delivery receipts + retries + dlq"
+                values={["yes", "best effort", "yes", "yes"]}
+              />
+              <CompareRow
+                label="hard rate ceiling"
+                values={["per-app, tunable", "600/sec global", "n/a", "n/a"]}
+              />
+              <CompareRow
                 label="runs on cloudflare workers"
                 values={["yes", "no", "no", "no"]}
               />
@@ -615,43 +659,61 @@ export default function Home() {
           <div className="font-mono text-[11px] uppercase tracking-[0.14em] text-muted">
             <span className="text-accent">─&nbsp;</span> pricing
           </div>
-          <div className="font-mono text-[11px] uppercase tracking-[0.12em] text-muted">
-            free. forever.
-          </div>
+          <Link
+            href="/pricing"
+            className="font-mono text-[11px] uppercase tracking-[0.12em] text-muted hover:text-text"
+          >
+            full pricing →
+          </Link>
         </div>
-        <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
           <PricingCard
-            tag="hosted"
+            tag="free"
             title="$0"
-            tagline="edgepush.dev"
-            body="Free hosted instance. No credit card. No seat limits. No per-message fee. Reasonable rate limits to keep the service healthy. Perfect for side projects, indie apps, and trying it out."
+            tagline="edgepush.dev hosted"
+            body="No credit card. The fastest way to try edgepush against a real device. Sized for side projects and indie apps that haven't shipped yet."
             cta={{ href: "/sign-in", label: "$ sign_in_with_github" }}
             features={[
-              "unlimited apps",
-              "unlimited api keys",
+              "1 app",
+              "10K events / month",
+              "7-day delivery log",
               "BYO apns + fcm credentials",
               "delivery receipts + webhooks",
-              "1000 pushes / minute / app",
               "support via github issues",
+            ]}
+          />
+          <PricingCard
+            tag="pro"
+            title="$29"
+            tagline="edgepush.dev hosted"
+            body="For indie shippers running a few apps in production. Same infrastructure as free, just with the room to actually use it. Priority email support direct from the operator."
+            cta={{ href: "/pricing", label: "$ upgrade_to_pro" }}
+            features={[
+              "3 apps",
+              "50K events / month",
+              "14-day delivery log",
+              "everything in free, plus:",
+              "priority email support",
+              "credential health alerts",
             ]}
           />
           <PricingCard
             tag="self-host"
             title="$0"
             tagline="your cloudflare account"
-            body="Same code, on your own infra. Cloudflare's free tier covers most apps comfortably. You own the data, the credentials, the rate limits. No edgepush in the middle."
+            body="Same code, your infra, your data. Cloudflare's free tier covers most apps. You own the credentials, the rate limits, the deploy cadence. No edgepush.dev in the middle."
             cta={{
-              href: "https://github.com/akshitkrnagpal/edgepush#self-host-on-cloudflare",
+              href: "https://github.com/akshitkrnagpal/edgepush/blob/main/SELFHOST.md",
               label: "$ deploy_your_own",
               external: true,
             }}
             features={[
-              "MIT licensed source",
-              "two wrangler deploys",
+              "unlimited apps + events",
+              "agpl-3.0 server source",
               "your D1, KV, queue, DO",
               "your apns + fcm credentials",
               "tunable rate limits",
-              "no telemetry",
+              "no telemetry, no operator",
             ]}
           />
         </div>
@@ -685,7 +747,7 @@ export default function Home() {
           />
           <FaqItem
             q="Is this production-ready?"
-            a="Honestly, not yet. v0.1 is the first public release. The send + dispatch + webhook flow is working end-to-end, but the test surface is thin and APIs may shift before 1.0. File an issue if you find rough edges."
+            a="The send + dispatch + receipts + webhooks + dashboard + credential health probes + nightly D1 backup + Stripe billing + operator runbook all shipped in v0.1. 70 unit tests cover the cryptographic and response-interpretation surfaces. There are no end-to-end integration tests against a real D1 yet, so APIs may still shift before 1.0. Honest answer: I'd run a side project on it today, I'd want a week of soak time before betting a paying customer's launch on it."
           />
           <FaqItem
             q="Why Cloudflare instead of AWS or Vercel?"
@@ -705,19 +767,21 @@ export default function Home() {
             <span className="text-accent">$&nbsp;</span> ready_to_ship
           </div>
           <h2 className="mb-4 max-w-2xl font-mono text-3xl font-bold leading-[1.05] tracking-[-0.02em] text-text sm:text-4xl">
-            Ship pushes in{" "}
-            <span className="text-accent">five minutes</span>.
+            Ship pushes by{" "}
+            <span className="text-accent">end of day</span>.
           </h2>
           <p className="mb-8 max-w-xl font-sans text-[16px] text-muted-strong">
-            Free forever on the hosted service, or self-host on your own
-            Cloudflare account. No credit card, no seat limits, no upsell.
+            Free hosted tier on edgepush.dev. Pro is $29/mo when you outgrow
+            it. Or run the whole stack on your own Cloudflare account, no
+            credit card, no operator in the middle.
           </p>
           <div className="flex flex-wrap gap-3">
             <Link
               href="/sign-in"
               className="inline-flex items-center gap-2 rounded-none bg-text px-5 py-3 font-mono text-[12px] font-semibold text-black hover:bg-accent"
             >
-              <span className="text-accent">$</span> sign_in_with_github
+              <GithubMark />
+              sign_in_with_github
             </Link>
             <a
               href="https://github.com/akshitkrnagpal/edgepush"
@@ -738,9 +802,9 @@ export default function Home() {
           <div>
             <p className="text-text">edgepush</p>
             <p className="mt-1">
-              &copy; {new Date().getFullYear()} · open source · mit licensed
+              &copy; {new Date().getFullYear()} · server agpl-3.0 · sdk + cli mit
             </p>
-            <p className="mt-1">v0.1.0 · alpha</p>
+            <p className="mt-1">v0.2 · alpha</p>
           </div>
         </div>
         <FooterColumn title="product">

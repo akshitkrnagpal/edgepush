@@ -22,10 +22,49 @@ export interface PushMessage {
   priority?: "high" | "normal";
   /** Time-to-live in seconds. */
   ttl?: number;
+  /**
+   * Absolute Unix expiration timestamp in seconds. Takes precedence over
+   * `ttl` if both are set. Use this when you already know the wall-clock
+   * deadline.
+   */
+  expirationAt?: number;
   /** Time-sensitive flag (iOS). Breaks through Focus modes. */
   timeSensitive?: boolean;
   /** Content-available flag for silent background updates. */
   contentAvailable?: boolean;
+  /**
+   * iOS mutable-content flag. Set true when your Notification Service
+   * Extension needs to mutate the payload before display (the standard
+   * pattern for downloading and attaching an `image`).
+   */
+  mutableContent?: boolean;
+  /**
+   * Image URL for rich notifications. On iOS your Notification Service
+   * Extension reads this from the custom data and downloads it; you must
+   * also set `mutableContent: true`. On Android it's forwarded to
+   * `android.notification.image` for native rendering.
+   */
+  image?: string;
+  /**
+   * Collapse key. Identical collapse keys replace each other on the device
+   * so the user only sees the latest one. Max 64 bytes. Maps to
+   * `apns-collapse-id` on iOS and `android.collapse_key` on Android.
+   */
+  collapseId?: string;
+  /**
+   * APNs push type override. Defaults to `alert` (or `background` when
+   * `contentAvailable` is true). Set explicitly when sending VoIP,
+   * location, complication, fileprovider, or MDM payloads — these
+   * require matching topic suffixes and entitlements on your app side.
+   */
+  pushType?:
+    | "alert"
+    | "background"
+    | "voip"
+    | "location"
+    | "complication"
+    | "fileprovider"
+    | "mdm";
 }
 
 export type ReceiptStatus =

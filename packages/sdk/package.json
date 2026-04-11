@@ -1,6 +1,6 @@
 {
   "name": "@edgepush/sdk",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Official Node/TypeScript SDK for edgepush. Send push notifications to iOS and Android with a single API.",
   "type": "module",
   "main": "./dist/index.cjs",

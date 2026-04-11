@@ -5,7 +5,58 @@ All notable changes to edgepush land here. Follows
 loose semver — versions bump when enough user-visible change
 accumulates to be worth naming.
 
-## [Unreleased] — v0.1 launch prep
+## [Unreleased] — v0.2: full APNs/FCM surface
+
+Closes the capability gap that Expo Push Service has against direct
+APNs/FCM. Every field below is supported on the matching native side
+and was missing from edgepush v0.1.
+
+### Added — `PushMessage` schema (`packages/shared/src/messages.ts`)
+
+- **`mutableContent: boolean`** — sets `aps[mutable-content] = 1`. The
+  required flag for any iOS Notification Service Extension that
+  modifies the payload before display (the standard pattern for
+  downloading and attaching an `image`).
+- **`image: string`** — image URL for rich notifications. On iOS the
+  NSE reads it from the custom data block; on Android it's forwarded
+  to `android.notification.image` for native rendering.
+- **`collapseId: string`** (max 64 bytes) — collapse key. Identical
+  keys replace each other on the device. Maps to `apns-collapse-id`
+  on iOS and `android.collapse_key` on Android.
+- **`pushType`** — explicit APNs push type override. One of `alert`,
+  `background`, `voip`, `location`, `complication`, `fileprovider`,
+  `mdm`. Defaults to `alert` (or `background` when `contentAvailable`
+  is true). Required when sending VoIP, location, complication, or
+  similar payloads with their matching topic suffixes.
+- **`expirationAt: number`** — absolute Unix expiration timestamp.
+  Takes precedence over `ttl` when both are set. Use this when you
+  already know the wall-clock deadline (e.g., a meeting reminder
+  worthless after 9:00 AM).
+
+### Changed — dispatchers
+
+- `dispatchApns` now forwards `apns-collapse-id`, honors `pushType`,
+  honors `expirationAt`, and sets `aps[mutable-content]` and the
+  custom-data `image` field.
+- `dispatchFcm` now sets `android.collapse_key`, `android.notification.image`
+  (and the legacy top-level `notification.image`), and honors
+  `expirationAt` by computing the remaining TTL on the fly.
+
+### Changed — CLI
+
+`@edgepush/cli` `send` command gained: `--image`, `--collapse-id`,
+`--priority`, `--ttl`, `--expiration-at`, `--push-type`,
+`--mutable-content`, `--content-available`, `--time-sensitive`.
+
+### Versioning
+
+- `@edgepush/sdk` 0.1.0 → **0.2.0** (additive — all new fields are
+  optional, no breaking changes)
+- `@edgepush/cli` 0.1.0 → **0.2.0**
+
+---
+
+## [v0.1] — launch prep
 
 This is the big one. v0.1 is the first "ready to show other
 humans" cut of edgepush. Everything below shipped across a single

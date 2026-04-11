@@ -85,6 +85,28 @@ export async function dispatchFcm(
 ): Promise<FcmDispatchResult> {
   const accessToken = await getAccessToken(creds);
 
+  // FCM lets you put image at the top-level notification block (legacy)
+  // or under android.notification.image (HTTP v1). We use the v1 location.
+  const androidNotification: Record<string, unknown> = {
+    sound: message.sound ?? "default",
+    channel_id: message.category,
+  };
+  if (message.image) {
+    androidNotification.image = message.image;
+  }
+
+  // expirationAt (absolute) wins over ttl (relative).
+  let androidTtl: string | undefined;
+  if (message.expirationAt !== undefined) {
+    const seconds = Math.max(
+      0,
+      message.expirationAt - Math.floor(Date.now() / 1000),
+    );
+    androidTtl = `${seconds}s`;
+  } else if (message.ttl !== undefined) {
+    androidTtl = `${message.ttl}s`;
+  }
+
   const fcmMessage: Record<string, unknown> = {
     token: deviceToken,
     notification:
@@ -92,6 +114,8 @@ export async function dispatchFcm(
         ? {
             title: message.title,
             body: message.body,
+            // Top-level image is also honored by some clients; harmless dup.
+            image: message.image,
           }
         : undefined,
     data: message.data
@@ -101,17 +125,24 @@ export async function dispatchFcm(
       : undefined,
     android: {
       priority: message.priority === "normal" ? "NORMAL" : "HIGH",
-      ttl: message.ttl !== undefined ? `${message.ttl}s` : undefined,
-      notification: {
-        sound: message.sound ?? "default",
-        channel_id: message.category,
-      },
+      ttl: androidTtl,
+      collapse_key: message.collapseId,
+      notification: androidNotification,
     },
   };
 
   // Strip undefined fields
   for (const k of ["notification", "data"] as const) {
     if (fcmMessage[k] === undefined) delete fcmMessage[k];
+  }
+  // Drop the top-level notification.image when no image is set so we don't
+  // send `image: undefined` to FCM (some clients reject unknown nulls).
+  if (
+    fcmMessage.notification &&
+    typeof fcmMessage.notification === "object" &&
+    (fcmMessage.notification as Record<string, unknown>).image === undefined
+  ) {
+    delete (fcmMessage.notification as Record<string, unknown>).image;
   }
 
   const res = await fetch(

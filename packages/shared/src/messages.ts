@@ -33,6 +33,12 @@ export const PushMessageSchema = z.object({
    */
   ttl: z.number().int().min(0).max(2419200).optional(),
   /**
+   * Absolute Unix expiration timestamp in seconds. Takes precedence over
+   * `ttl` if both are set. Use this when you already know the wall-clock
+   * deadline (e.g., a meeting reminder that's worthless after 9:00 AM).
+   */
+  expirationAt: z.number().int().min(0).optional(),
+  /**
    * Time-sensitive flag (iOS). Breaks through Focus modes.
    */
   timeSensitive: z.boolean().optional(),
@@ -40,6 +46,42 @@ export const PushMessageSchema = z.object({
    * Content-available flag for silent background updates.
    */
   contentAvailable: z.boolean().optional(),
+  /**
+   * iOS mutable-content flag. Set true if your Notification Service
+   * Extension needs to modify the payload before display (the standard
+   * pattern for downloading and attaching an `image`).
+   */
+  mutableContent: z.boolean().optional(),
+  /**
+   * Image URL for rich notifications. On iOS your Notification Service
+   * Extension reads this from the custom data and downloads it; you must
+   * also set `mutableContent: true`. On Android edgepush forwards it to
+   * `android.notification.image` for native rendering.
+   */
+  image: z.string().url().optional(),
+  /**
+   * Collapse key. Identical collapse keys replace each other on the device
+   * so the user only sees the latest one. Max 64 bytes (APNs limit).
+   * Maps to `apns-collapse-id` on iOS and `android.collapse_key` on Android.
+   */
+  collapseId: z.string().max(64).optional(),
+  /**
+   * APNs push type override. Defaults to `alert` (or `background` when
+   * `contentAvailable` is true). Set explicitly when sending VoIP, location,
+   * complication, fileprovider, or MDM payloads — these require matching
+   * topic suffixes and entitlements on your app side.
+   */
+  pushType: z
+    .enum([
+      "alert",
+      "background",
+      "voip",
+      "location",
+      "complication",
+      "fileprovider",
+      "mdm",
+    ])
+    .optional(),
 });
 
 export type PushMessage = z.infer<typeof PushMessageSchema>;
