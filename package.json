@@ -9,7 +9,8 @@
     "dev": "turbo run dev",
     "lint": "turbo run lint",
     "typecheck": "turbo run typecheck",
-    "clean": "turbo run clean && rm -rf node_modules"
+    "clean": "turbo run clean && rm -rf node_modules",
+    "release": "node scripts/release.mjs"
   },
   "devDependencies": {
     "turbo": "^2.9.5",

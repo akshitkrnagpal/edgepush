@@ -1,0 +1,62 @@
+name: Release
+
+# Publishes @edgepush/sdk and @edgepush/cli to npm whenever a tag like
+# v0.1.0 is pushed. Both packages share a version and ship together.
+#
+# Setup:
+#   1. Create an npm automation token: npmjs.com → Access Tokens → Automation
+#   2. Add it as a repo secret named NPM_TOKEN
+#   3. Bump versions in packages/{sdk,cli}/package.json, commit, then:
+#        git tag v0.1.0 && git push origin v0.1.0
+
+on:
+  push:
+    tags:
+      - "v*"
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write # for npm provenance
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+          registry-url: https://registry.npmjs.org
+
+      - name: Install
+        run: pnpm install --frozen-lockfile
+
+      - name: Verify tag matches package versions
+        run: |
+          TAG="${GITHUB_REF#refs/tags/v}"
+          SDK_VERSION=$(node -p "require('./packages/sdk/package.json').version")
+          CLI_VERSION=$(node -p "require('./packages/cli/package.json').version")
+          if [ "$TAG" != "$SDK_VERSION" ] || [ "$TAG" != "$CLI_VERSION" ]; then
+            echo "Tag $TAG does not match sdk=$SDK_VERSION cli=$CLI_VERSION"
+            exit 1
+          fi
+
+      - name: Build
+        run: pnpm --filter @edgepush/sdk --filter @edgepush/cli build
+
+      - name: Publish @edgepush/sdk
+        run: pnpm publish --access public --no-git-checks --provenance
+        working-directory: packages/sdk
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Publish @edgepush/cli
+        run: pnpm publish --access public --no-git-checks --provenance
+        working-directory: packages/cli
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
