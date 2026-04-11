@@ -62,10 +62,26 @@ jobs:
       # pnpm publish rewrites workspace:* deps to the real version on the
       # fly and shells out to the npm CLI for the actual upload, so the
       # latest npm above is what handles the OIDC handshake.
+      #
+      # Each step skips when the version is already on npm so re-running
+      # the workflow (or tagging a release of a manually published version)
+      # is a no-op rather than a hard failure.
       - name: Publish @edgepush/sdk
-        run: pnpm publish --access public --no-git-checks --provenance
         working-directory: packages/sdk
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          if npm view "@edgepush/sdk@$VERSION" version >/dev/null 2>&1; then
+            echo "@edgepush/sdk@$VERSION already on npm, skipping"
+            exit 0
+          fi
+          pnpm publish --access public --no-git-checks --provenance
 
       - name: Publish @edgepush/cli
-        run: pnpm publish --access public --no-git-checks --provenance
         working-directory: packages/cli
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          if npm view "@edgepush/cli@$VERSION" version >/dev/null 2>&1; then
+            echo "@edgepush/cli@$VERSION already on npm, skipping"
+            exit 0
+          fi
+          pnpm publish --access public --no-git-checks --provenance
