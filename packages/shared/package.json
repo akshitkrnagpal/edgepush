@@ -2,6 +2,7 @@
   "name": "@edgepush/shared",
   "version": "0.0.0",
   "private": true,
+  "license": "MIT",
   "description": "Shared types and utilities for edgepush",
   "type": "module",
   "main": "./src/index.ts",
