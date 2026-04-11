@@ -20,20 +20,30 @@
 import Link from "next/link";
 import { useState } from "react";
 
-import { useCreateCheckout } from "@/lib/queries";
+import { api } from "@/lib/api";
 
 export default function PricingPage() {
+  // Public marketing page — lives outside the dashboard route segment,
+  // so there's no QueryClientProvider in scope. We can't use the React
+  // Query hooks from lib/queries.ts here (they'd throw "No QueryClient
+  // set" during Next's static prerender pass). Call the API client
+  // directly with plain useState for the pending flag. Loses no
+  // functionality — this call is a one-shot, nothing to cache or
+  // invalidate.
   const [checkoutError, setCheckoutError] = useState<string | null>(null);
-  const checkout = useCreateCheckout();
+  const [checkoutPending, setCheckoutPending] = useState(false);
 
   async function handleUpgrade() {
     setCheckoutError(null);
+    setCheckoutPending(true);
     try {
-      const result = await checkout.mutateAsync();
+      const result = await api.createCheckout();
       window.location.href = result.url;
     } catch (err) {
       setCheckoutError(err instanceof Error ? err.message : "checkout failed");
+      setCheckoutPending(false);
     }
+    // On success the window redirects, so no need to flip pending back.
   }
 
   return (
@@ -115,11 +125,11 @@ export default function PricingPage() {
               "webhook deliveries",
             ]}
             cta={{
-              label: checkout.isPending
+              label: checkoutPending
                 ? "$ redirecting…"
                 : "$ upgrade_to_pro",
               onClick: handleUpgrade,
-              disabled: checkout.isPending,
+              disabled: checkoutPending,
             }}
             footnote={
               checkoutError ? (
