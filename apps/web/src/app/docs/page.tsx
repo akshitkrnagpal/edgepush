@@ -10,6 +10,9 @@ const sections = [
   { id: "install", label: "install" },
   { id: "create-app", label: "create app" },
   { id: "upload-credentials", label: "credentials" },
+  { id: "ios", label: "ios client" },
+  { id: "android", label: "android client" },
+  { id: "react-native", label: "react native" },
   { id: "send", label: "send" },
   { id: "rich", label: "rich notifications" },
   { id: "receipts", label: "receipts" },
@@ -112,7 +115,275 @@ export default function DocsPage() {
             </p>
           </Section>
 
-          <Section id="send" n="04" title="send your first push">
+          <Section id="ios" n="04" title="get a device token from iOS">
+            <p className="mb-4">
+              In your Swift app, ask the user for permission, register with
+              APNs, then convert the returned <span className="font-mono text-text">Data</span>{" "}
+              into the lowercase hex string edgepush expects.
+            </p>
+            <Code>{`// AppDelegate.swift
+import UIKit
+import UserNotifications
+
+@UIApplicationMain
+class AppDelegate: UIResponder, UIApplicationDelegate {
+
+  func application(
+    _ application: UIApplication,
+    didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?
+  ) -> Bool {
+    UNUserNotificationCenter.current().requestAuthorization(
+      options: [.alert, .sound, .badge]
+    ) { granted, _ in
+      guard granted else { return }
+      DispatchQueue.main.async {
+        application.registerForRemoteNotifications()
+      }
+    }
+    return true
+  }
+
+  func application(
+    _ application: UIApplication,
+    didRegisterForRemoteNotificationsWithDeviceToken deviceToken: Data
+  ) {
+    // edgepush expects 64 lowercase hex characters
+    let token = deviceToken.map { String(format: "%02x", $0) }.joined()
+    Task { await registerToken(token) }
+  }
+
+  func application(
+    _ application: UIApplication,
+    didFailToRegisterForRemoteNotificationsWithError error: Error
+  ) {
+    print("APNs registration failed:", error)
+  }
+}`}</Code>
+            <p className="mt-4 mb-2 font-mono text-[12px] uppercase tracking-[0.12em] text-muted">
+              <span className="text-accent">─&nbsp;</span> notes
+            </p>
+            <ul className="list-none space-y-2 font-sans text-[14px] leading-[1.6] text-muted-strong">
+              <li>
+                <span className="text-accent">●</span> The token is the same
+                between development and production builds, but only{" "}
+                <span className="font-mono text-text">api.push.apple.com</span>{" "}
+                (production) or{" "}
+                <span className="font-mono text-text">
+                  api.sandbox.push.apple.com
+                </span>{" "}
+                (sandbox) will accept it depending on which provisioning
+                profile your app was built with. Mark the credential in the
+                edgepush dashboard as production or sandbox accordingly.
+              </li>
+              <li>
+                <span className="text-accent">●</span> The token can change
+                when the user reinstalls the app, restores from backup, or
+                migrates to a new device. Send fresh tokens to your server
+                whenever{" "}
+                <span className="font-mono text-text">
+                  didRegisterForRemoteNotifications…
+                </span>{" "}
+                fires.
+              </li>
+              <li>
+                <span className="text-accent">●</span> Don&apos;t use Expo&apos;s{" "}
+                <span className="font-mono text-text">ExponentPushToken</span>{" "}
+                format with edgepush. edgepush wants the native APNs token
+                directly. See the React Native section below for the migration.
+              </li>
+            </ul>
+          </Section>
+
+          <Section id="android" n="05" title="get a device token from android">
+            <p className="mb-4">
+              You need a Firebase project with Cloud Messaging enabled and
+              your{" "}
+              <span className="font-mono text-text">google-services.json</span>{" "}
+              file in your app&apos;s{" "}
+              <span className="font-mono text-text">app/</span> directory. The
+              same Firebase project must own the service account JSON you
+              uploaded to edgepush.
+            </p>
+            <p className="mb-4">
+              Request the initial token after sign-in, then implement{" "}
+              <span className="font-mono text-text">onNewToken</span> in a
+              FirebaseMessagingService subclass to catch refreshes:
+            </p>
+            <Code>{`// MyMessagingService.kt
+import com.google.firebase.messaging.FirebaseMessagingService
+import com.google.firebase.messaging.RemoteMessage
+
+class MyMessagingService : FirebaseMessagingService() {
+
+  override fun onNewToken(token: String) {
+    // Fires whenever the FCM token rotates: install, app data
+    // clear, restore, periodic FCM rotation. Send to your server
+    // immediately so you stop pushing to a dead token.
+    sendTokenToServer(token)
+  }
+
+  override fun onMessageReceived(message: RemoteMessage) {
+    // Optional: handle pushes received while the app is foregrounded.
+  }
+}`}</Code>
+            <p className="mt-4 mb-2">
+              Register the service in{" "}
+              <span className="font-mono text-text">AndroidManifest.xml</span>:
+            </p>
+            <Code>{`<service
+  android:name=".MyMessagingService"
+  android:exported="false">
+  <intent-filter>
+    <action android:name="com.google.firebase.MESSAGING_EVENT" />
+  </intent-filter>
+</service>`}</Code>
+            <p className="mt-4 mb-2">Fetch the initial token after sign-in:</p>
+            <Code>{`import com.google.firebase.messaging.FirebaseMessaging
+import kotlinx.coroutines.tasks.await
+
+suspend fun fetchInitialFcmToken(): String? {
+  return try {
+    FirebaseMessaging.getInstance().token.await()
+  } catch (e: Exception) {
+    null  // Google Play Services unavailable, etc.
+  }
+}`}</Code>
+            <p className="mt-4 mb-2 font-mono text-[12px] uppercase tracking-[0.12em] text-muted">
+              <span className="text-accent">─&nbsp;</span> notes
+            </p>
+            <ul className="list-none space-y-2 font-sans text-[14px] leading-[1.6] text-muted-strong">
+              <li>
+                <span className="text-accent">●</span> The token is a long
+                opaque string (over 150 characters), much longer than an
+                APNs hex token. edgepush auto-detects format on{" "}
+                <span className="font-mono text-text">/v1/send</span> if you
+                don&apos;t pass a{" "}
+                <span className="font-mono text-text">platform</span> field,
+                but you can set it explicitly.
+              </li>
+              <li>
+                <span className="text-accent">●</span> The Firebase project
+                ID in your client&apos;s{" "}
+                <span className="font-mono text-text">google-services.json</span>{" "}
+                must match the{" "}
+                <span className="font-mono text-text">project_id</span>{" "}
+                inside the FCM service account JSON you uploaded to edgepush.
+                Different projects = silent delivery failures.
+              </li>
+              <li>
+                <span className="text-accent">●</span> If your app supports
+                multiple flavors (e.g. dev / staging / prod) point each
+                flavor at its own Firebase project AND its own edgepush app.
+                Don&apos;t cross-wire credentials.
+              </li>
+            </ul>
+          </Section>
+
+          <Section id="react-native" n="06" title="react native: bare or expo">
+            <p className="mb-4">
+              React Native gives you three paths. Pick the one matching your
+              project shape — and if you&apos;re an Expo user, read the
+              callout below carefully because there&apos;s exactly one trap
+              you need to avoid.
+            </p>
+
+            <h3 className="mt-6 mb-2 font-mono text-[14px] font-bold text-text">
+              Bare RN with @react-native-firebase/messaging
+            </h3>
+            <Code>{`import messaging from "@react-native-firebase/messaging";
+
+export async function setupPush() {
+  const status = await messaging().requestPermission();
+  if (
+    status === messaging.AuthorizationStatus.DENIED ||
+    status === messaging.AuthorizationStatus.NOT_DETERMINED
+  ) return;
+
+  // FCM token (works for both iOS and Android with this library;
+  // on iOS it returns the FCM-wrapped APNs token).
+  const fcmToken = await messaging().getToken();
+  await sendTokenToServer({ platform: "fcm", token: fcmToken });
+
+  // For Apple, if you want the raw APNs token instead, use:
+  //   const apns = await messaging().getAPNSToken();
+  // …and upload your .p8 to edgepush as the iOS credential.
+
+  messaging().onTokenRefresh((newToken) => {
+    sendTokenToServer({ platform: "fcm", token: newToken });
+  });
+}`}</Code>
+
+            <h3 className="mt-8 mb-2 font-mono text-[14px] font-bold text-text">
+              Expo (managed or bare) with expo-notifications
+            </h3>
+            <p className="mb-3">
+              Use{" "}
+              <span className="font-mono text-text">
+                getDevicePushTokenAsync
+              </span>{" "}
+              to get the native APNs or FCM token. This is the migration
+              point from Expo&apos;s Push Service to edgepush — see the
+              callout below.
+            </p>
+            <Code>{`import * as Notifications from "expo-notifications";
+
+export async function setupPush() {
+  const { status } = await Notifications.requestPermissionsAsync();
+  if (status !== "granted") return;
+
+  // ✅ DEVICE token = native APNs hex / FCM token (use this with edgepush)
+  // ❌ EXPO token = "ExponentPushToken[…]" (only Expo's Push Service)
+  const token = await Notifications.getDevicePushTokenAsync();
+  // token.type:  "ios" | "android"
+  // token.data:  the native token string
+
+  await fetch("https://your.api/register-token", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({
+      platform: token.type,
+      token: token.data,
+    }),
+  });
+
+  Notifications.addPushTokenListener((next) => {
+    // Token rotated; resend
+  });
+}`}</Code>
+
+            <div className="mt-6 border border-accent bg-surface px-5 py-4 font-sans text-[14px] leading-[1.6] text-muted-strong">
+              <p className="mb-2 font-mono text-[11px] uppercase tracking-[0.12em] text-accent">
+                ●&nbsp; the one expo trap
+              </p>
+              <p className="mb-2">
+                Most Expo Notifications tutorials lead with{" "}
+                <span className="font-mono text-text">
+                  getExpoPushTokenAsync()
+                </span>
+                . That returns an{" "}
+                <span className="font-mono text-text">
+                  ExponentPushToken[xxx]
+                </span>{" "}
+                wrapper that <em>only</em> Expo&apos;s Push Service understands.
+                It is not a native APNs or FCM token.
+              </p>
+              <p>
+                edgepush wants the real one. Always use{" "}
+                <span className="font-mono text-text">
+                  getDevicePushTokenAsync()
+                </span>{" "}
+                instead. That&apos;s the entire client-side migration step
+                from Expo Push to edgepush — change one function name. The
+                server side is already handled because{" "}
+                <span className="font-mono text-text">
+                  getDevicePushTokenAsync
+                </span>{" "}
+                returns the same token format APNs and FCM use natively.
+              </p>
+            </div>
+          </Section>
+
+          <Section id="send" n="07" title="send your first push">
             <Code>{`import { Edgepush } from "@edgepush/sdk";
 
 const client = new Edgepush({
@@ -135,7 +406,7 @@ console.log(ticket.id); // save this to poll the receipt later`}</Code>
             </p>
           </Section>
 
-          <Section id="rich" n="05" title="rich notifications, collapse, expiration">
+          <Section id="rich" n="08" title="rich notifications, collapse, expiration">
             <p className="mb-4">
               edgepush forwards the full APNs and FCM header surface so you
               can ship features Expo Push Service can&apos;t. The fields below
@@ -184,7 +455,7 @@ console.log(ticket.id); // save this to poll the receipt later`}</Code>
             </p>
           </Section>
 
-          <Section id="receipts" n="06" title="check delivery status">
+          <Section id="receipts" n="09" title="check delivery status">
             <p className="mb-4">
               After you send, poll the receipt to see whether APNs or FCM
               accepted the message:
@@ -201,7 +472,7 @@ if (receipt.status === "delivered") {
 }`}</Code>
           </Section>
 
-          <Section id="webhooks" n="07" title="webhooks">
+          <Section id="webhooks" n="10" title="webhooks">
             <p className="mb-4">
               Configure a webhook URL on your app and edgepush will POST
               every state change to your endpoint with an HMAC-SHA256
@@ -239,7 +510,7 @@ function verify(body: string, sigHeader: string, secret: string) {
 }`}</Code>
           </Section>
 
-          <Section id="batch" n="08" title="batch sends">
+          <Section id="batch" n="11" title="batch sends">
             <p className="mb-4">
               Send up to 100 messages in a single call. Dispatched through a
               Cloudflare Queue with automatic retries.
@@ -252,7 +523,7 @@ function verify(body: string, sigHeader: string, secret: string) {
 const receipts = await client.getReceipts(tickets.map((t) => t.id));`}</Code>
           </Section>
 
-          <Section id="cli" n="09" title="cli">
+          <Section id="cli" n="12" title="cli">
             <p className="mb-4">
               <span className="font-mono text-text">@edgepush/cli</span> is
               a terminal client for sending pushes from your laptop or a
@@ -278,7 +549,7 @@ edgepush receipt <ticket_id>`}</Code>
             </p>
           </Section>
 
-          <Section id="api" n="10" title="rest api">
+          <Section id="api" n="13" title="rest api">
             <p className="mb-4">
               The SDK wraps a simple REST API. You can call it directly from
               any language. All endpoints require{" "}
@@ -304,7 +575,7 @@ curl https://api.edgepush.dev/v1/receipts/TICKET_ID \\
   -H "Authorization: Bearer io.acme.myapp|abc..."`}</Code>
           </Section>
 
-          <Section id="self-host" n="11" title="self-host it">
+          <Section id="self-host" n="14" title="self-host it">
             <p className="mb-4">
               edgepush server + dashboard are{" "}
               <span className="font-mono text-text">AGPL-3.0</span>. The SDK,
