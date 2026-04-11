@@ -568,7 +568,7 @@ dashboardRouter.delete("/account", async (c) => {
   // Cascade delete. D1 foreign keys are set up with onDelete:'cascade'
   // from apps/api-keys/credentials/messages/webhooks/audit-log down to
   // apps and user, so deleting the user row nukes everything. But we
-  // don't trust that implicitly — we wrap it all in db.batch() so a
+  // don't trust that implicitly, we wrap it all in db.batch() so a
   // partial cascade can't leave orphans.
   //
   // Order matters: delete the leaf rows first, then apps, then the
@@ -595,7 +595,7 @@ dashboardRouter.delete("/account", async (c) => {
   statements.push(
     c.var.db.delete(subscriptions).where(eq(subscriptions.userId, u.id)),
     c.var.db.delete(usageCounters).where(eq(usageCounters.userId, u.id)),
-    // Better Auth owns user/session/account/verification — we only
+    // Better Auth owns user/session/account/verification, we only
     // delete our own tables and the user row. Sessions cascade from
     // user via onDelete.
     c.var.db.delete(user).where(eq(user.id, u.id)),

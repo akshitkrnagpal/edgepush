@@ -126,7 +126,7 @@ export const apnsCredentials = sqliteTable("apns_credentials", {
   teamId: text("team_id").notNull(),
   /**
    * @deprecated Read bundleId from apps.packageName via join instead.
-   * This column is no longer the source of truth — the dashboard PUT
+   * This column is no longer the source of truth, the dashboard PUT
    * handler writes `app.packageName` into it to satisfy the legacy
    * NOT NULL constraint, and `loadApnsCredentials` in dispatch.ts
    * ignores it entirely. The column will be physically dropped in a

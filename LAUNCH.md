@@ -44,7 +44,7 @@ for iOS and Android.
 
 Things I made sure it does:
 
-- delivery event log (search by status, time, app) — you never lose
+- delivery event log (search by status, time, app), you never lose
   track of a failed push
 - active credential health probes: every credential is authenticated
   against Apple and Google every 24h and alerts you by email if your
@@ -67,10 +67,10 @@ CLI. You can embed @edgepush/sdk in a closed-source app without
 AGPL obligations. If you want to run a commercial hosted edgepush
 service, see COMMERCIAL.md.
 
-Hosted at https://edgepush.dev — free tier is 10,000 events/mo, Pro
+Hosted at https://edgepush.dev, free tier is 10,000 events/mo, Pro
 tier is $29/mo for 50,000 events/mo + 14-day retention + me
 answering your email when something breaks. Self-host is free
-forever with unlimited everything — one `wrangler deploy`, see
+forever with unlimited everything, one `wrangler deploy`, see
 SELFHOST.md.
 
 Not yet production-hardened. APIs may shift before 1.0. I'm
@@ -81,7 +81,7 @@ Code: https://github.com/akshitkrnagpal/edgepush
 ```
 
 **Notes**:
-- Submit the GitHub URL as the primary link, not edgepush.dev —
+- Submit the GitHub URL as the primary link, not edgepush.dev -
   HN readers click the code first.
 - Post mid-week at 6–8 AM Pacific for best ranking odds.
 - Don't edit the title after submission; HN penalizes it.
@@ -92,7 +92,7 @@ Code: https://github.com/akshitkrnagpal/edgepush
 
 ## Twitter / X thread
 
-10-tweet thread. Line breaks in source are intentional — paste each
+10-tweet thread. Line breaks in source are intentional, paste each
 numbered block as a separate tweet.
 
 ```
@@ -115,7 +115,7 @@ source dashboard you can run on your own Cloudflare account.
 ```
 
 ```
-3/ The killer feature isn't sending push — sending push is solved.
+3/ The killer feature isn't sending push, sending push is solved.
 
 It's catching credential decay.
 
@@ -236,7 +236,7 @@ wrong.
 
 The whole thing is AGPL-3.0. I'm looking for other indie iOS devs
 who DIY push or hate their current push provider to send me
-feedback — what's missing, what's confusing, what I should build
+feedback, what's missing, what's confusing, what I should build
 next.
 
 Code: https://github.com/akshitkrnagpal/edgepush
@@ -252,7 +252,7 @@ handling, or anything else.
 
 **Title**:
 ```
-edgepush — open source push on Cloudflare, one API for iOS and Android, BYO credentials
+edgepush, open source push on Cloudflare, one API for iOS and Android, BYO credentials
 ```
 
 **Body**:
@@ -277,7 +277,7 @@ const edge = new EdgePush({ apiKey: "..." });
 
 await edge.send({
   to: deviceToken,
-  platform: "ios", // or "android" — auto-inferred from token
+  platform: "ios", // or "android", auto-inferred from token
   title: "build passed",
   body: "deploy is live",
 });
@@ -285,7 +285,7 @@ await edge.send({
 
 Things that matter for RN specifically:
 
-- The SDK is MIT — you can pull it into your Expo or bare RN app's
+- The SDK is MIT, you can pull it into your Expo or bare RN app's
   backend without worrying about AGPL
 - Tokens auto-infer platform from format (64-hex = iOS, else FCM)
 - Delivery receipts are queryable per-message, or you set a
@@ -311,7 +311,7 @@ before. DM or email hello@edgepush.dev.
 ## Cloudflare Discord #workers post
 
 ```
-Hey folks — just launched edgepush, an open source push
+Hey folks, just launched edgepush, an open source push
 notification service that lives entirely on Workers + D1 + KV +
 Queues + Durable Objects.
 
@@ -395,7 +395,7 @@ the day you actually launch.
 4. Another 15 minutes, post to r/reactnative.
 5. Another 15 minutes, post in Cloudflare Discord #workers.
 
-### T+1h — T+6h
+### T+1h. T+6h
 
 - [ ] Reply to every HN comment within 10 minutes for the first
       hour. This matters for ranking.
@@ -420,17 +420,17 @@ the day you actually launch.
 ## Pricing copy polish notes
 
 The pricing page (`apps/web/src/app/pricing/page.tsx`) already follows
-DESIGN.md voice rules — no marketing fluff in the current copy. Don't
+DESIGN.md voice rules, no marketing fluff in the current copy. Don't
 rewrite it for launch day unless something specific is confusing:
 
-- Free tier description: "edgepush.dev hosted trial" — signals this
+- Free tier description: "edgepush.dev hosted trial", signals this
   is a trial, not a permanent free plan, without using the word
   "trial" in a way that implies a time limit.
-- Pro tier description: "for indie shippers running a few apps" —
+- Pro tier description: "for indie shippers running a few apps" -
   names the target user explicitly. Not "for growing teams" or
   "for scale-ups".
-- Self-host tier description: "agpl-3.0 — run it on your own
-  cloudflare account" — license first, not a sell line.
+- Self-host tier description: "agpl-3.0, run it on your own
+  cloudflare account", license first, not a sell line.
 - Feature rows are facts, not benefits. "14-day log retention" not
   "See every delivery with confidence".
 

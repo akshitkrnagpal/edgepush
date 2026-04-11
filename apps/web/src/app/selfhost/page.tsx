@@ -16,7 +16,7 @@ import Link from "next/link";
 import { CURRENT_VERSION } from "@/lib/version";
 
 export const metadata = {
-  title: "edgepush — self-host",
+  title: "edgepush, self-host",
   description:
     "Run edgepush on your own Cloudflare account. AGPL-3.0 server, MIT SDK and CLI. One repo, two wrangler deploys, no telemetry.",
 };
@@ -245,7 +245,7 @@ export default function SelfHostPage() {
           />
           <Principle
             title="real workers infra"
-            body="D1 + KV + Queues with DLQ + Durable Objects. No external dependencies. No nodejs containers. Cold start is sub-50ms because there is no cold start — it's all native Worker primitives."
+            body="D1 + KV + Queues with DLQ + Durable Objects. No external dependencies. No nodejs containers. Cold start is sub-50ms because there is no cold start, it's all native Worker primitives."
           />
           <Principle
             title="MIT sdk + cli"
@@ -311,7 +311,7 @@ export default function SelfHostPage() {
         <div className="grid grid-cols-1 gap-x-12 gap-y-8 md:grid-cols-2">
           <FaqItem
             q="What does AGPL-3.0 mean for me?"
-            a="If you run edgepush as an internal service inside your company, AGPL is invisible — you don't have to do anything. AGPL only matters if you operate a hosted edgepush AS A SERVICE for third parties (like edgepush.dev does). In that case the AGPL requires you to publish any modifications you make to the server code. SDK + CLI are MIT, so they're unaffected."
+            a="If you run edgepush as an internal service inside your company, AGPL is invisible, you don't have to do anything. AGPL only matters if you operate a hosted edgepush AS A SERVICE for third parties (like edgepush.dev does). In that case the AGPL requires you to publish any modifications you make to the server code. SDK + CLI are MIT, so they're unaffected."
           />
           <FaqItem
             q="Will my self-hosted instance get updates automatically?"
@@ -319,7 +319,7 @@ export default function SelfHostPage() {
           />
           <FaqItem
             q="Is the self-hosted version a different product than the hosted one?"
-            a="Same code. The only difference is HOSTED_MODE — false (self-host default) skips the billing and retention paths. Every other feature, including credential probes, dead-letter queue, dashboard, audit log, webhooks, is on by default."
+            a="Same code. The only difference is HOSTED_MODE, false (self-host default) skips the billing and retention paths. Every other feature, including credential probes, dead-letter queue, dashboard, audit log, webhooks, is on by default."
           />
           <FaqItem
             q="What does it cost to run on Cloudflare?"
@@ -327,7 +327,7 @@ export default function SelfHostPage() {
           />
           <FaqItem
             q="Can I migrate between self-host and the hosted tier?"
-            a="One direction is easy, the other is manual. Self-host → hosted: sign up at edgepush.dev, re-upload credentials, switch your server's API URL. Hosted → self-host: follow the SELFHOST.md guide and re-upload credentials. There's no automated migration tool because both sides are storing native APNs and FCM tokens — your token list is portable by design."
+            a="One direction is easy, the other is manual. Self-host → hosted: sign up at edgepush.dev, re-upload credentials, switch your server's API URL. Hosted → self-host: follow the SELFHOST.md guide and re-upload credentials. There's no automated migration tool because both sides are storing native APNs and FCM tokens, your token list is portable by design."
           />
           <FaqItem
             q="What if I need help?"

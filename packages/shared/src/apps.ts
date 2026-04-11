@@ -24,7 +24,7 @@ export interface ApnsCredentials {
   teamId: string;
   /**
    * APNs topic header. Derived from the owning app's `packageName` at
-   * credential-load time — no longer a separately-uploaded field. This type
+   * credential-load time, no longer a separately-uploaded field. This type
    * is the *runtime* shape used by the dispatcher, not the wire shape of
    * the upload API (the upload API no longer accepts `bundleId`).
    */

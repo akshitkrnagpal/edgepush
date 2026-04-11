@@ -243,7 +243,7 @@ export default function Home() {
             id="tk_01HX2A9P…3J"
             status="pend"
             label="queued"
-            meta="— · fcm · device_android 14"
+            meta="- · fcm · device_android 14"
           />
           <LogLine
             ts="2026-04-11T04:25:09.113Z"
@@ -719,7 +719,7 @@ export default function Home() {
         <div className="grid grid-cols-1 gap-x-12 gap-y-8 md:grid-cols-2">
           <FaqItem
             q="What if I already have APNs and FCM set up?"
-            a="Perfect — that's the model. You upload your existing .p8 key and Firebase service account JSON in the dashboard. edgepush never gets new credentials, you're using yours."
+            a="Perfect, that's the model. You upload your existing .p8 key and Firebase service account JSON in the dashboard. edgepush never gets new credentials, you're using yours."
           />
           <FaqItem
             q="Where are my credentials stored?"

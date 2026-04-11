@@ -24,7 +24,7 @@ import { messages } from "../db/schema";
 
 /**
  * Kill switch KV key. If this key is set to ANY non-empty value, the
- * send handler returns 503 immediately — before auth, before any DB
+ * send handler returns 503 immediately, before auth, before any DB
  * read, before any downstream work. The operator can flip it in one
  * command:
  *
@@ -34,7 +34,7 @@ import { messages } from "../db/schema";
  *
  *   wrangler kv:key delete --binding=CACHE edgepush:killswitch:send
  *
- * Intended for incident response — e.g., a bad deploy is corrupting
+ * Intended for incident response, e.g., a bad deploy is corrupting
  * messages rows, pull the cord, ship the fix, release the cord. We
  * check KV on every request because KV reads from the nearest edge
  * cache are sub-millisecond; adding ~1ms of latency on the send path
@@ -45,7 +45,7 @@ const KILLSWITCH_SEND_KEY = "edgepush:killswitch:send";
 export const sendRouter = new Hono<AppContext>();
 
 sendRouter.post("/send", async (c) => {
-  // Kill switch check — first thing, before auth or anything that
+  // Kill switch check, first thing, before auth or anything that
   // might hit D1. Non-null value = send is disabled.
   const killswitch = await c.env.CACHE.get(KILLSWITCH_SEND_KEY);
   if (killswitch) {
@@ -80,7 +80,7 @@ sendRouter.post("/send", async (c) => {
 
   // Per-app burst rate limit via Durable Object. Cheap, reversible.
   // Runs before the monthly quota so rate-limited requests don't eat
-  // billable events — a rate-limited send is a retry-later, not a
+  // billable events, a rate-limited send is a retry-later, not a
   // consumed event.
   const limiterId = c.env.RATE_LIMITER.idFromName(authedApp.appId);
   const limiter = c.env.RATE_LIMITER.get(
@@ -95,7 +95,7 @@ sendRouter.post("/send", async (c) => {
     );
   }
 
-  // Monthly quota check (hosted mode only). Atomic reservation — if we
+  // Monthly quota check (hosted mode only). Atomic reservation, if we
   // can't fit `msgs.length` new events under the plan limit, reject the
   // entire batch. All-or-nothing semantics so the caller doesn't have
   // to track partial success. Self-host bypasses entirely.

@@ -1,9 +1,9 @@
-# Operator runbook — running edgepush.dev
+# Operator runbook, running edgepush.dev
 
 This is the runbook for the person (you) running the hosted tier of
 edgepush at `edgepush.dev`. It assumes you've already followed
 [SELFHOST.md](./SELFHOST.md) to get the Workers deployed and the D1
-migrations applied — this doc covers the extra setup, daily
+migrations applied, this doc covers the extra setup, daily
 operations, and incident response that only applies when you're
 taking real customer data and charging real money.
 
@@ -41,7 +41,7 @@ cd apps/api
 #   - billing endpoints return real Stripe Checkout sessions
 #   - POST /v1/webhooks/stripe accepts and processes Stripe events
 
-# Transactional email — required for credential health alerts,
+# Transactional email, required for credential health alerts,
 # payment-failed emails, and the operator digest.
 pnpm exec wrangler secret put RESEND_API_KEY
 
@@ -65,6 +65,12 @@ pnpm exec wrangler secret put STRIPE_PRO_PRICE_ID
 # webhook can look up the user without trusting the cardholder email.
 # Generate fresh: openssl rand -hex 32
 pnpm exec wrangler secret put STRIPE_REF_HMAC_KEY
+
+# Operator deep-health probe token. Enables GET /health/deep, which
+# pings D1 + KV + reports killswitch state in a single JSON. Disabled
+# (503) when this secret is unset, which is the default.
+# Generate fresh: openssl rand -hex 32
+pnpm exec wrangler secret put OPERATOR_PROBE_TOKEN
 ```
 
 Re-deploy after setting secrets:
@@ -78,6 +84,25 @@ pnpm --filter @edgepush/api deploy
 ```bash
 curl https://api.edgepush.dev/health
 # → {"status":"ok"}
+
+# Deep health: pings every binding, returns per-component status.
+curl -H "x-edgepush-operator-token: $OPERATOR_PROBE_TOKEN" \
+  https://api.edgepush.dev/health/deep
+# → {
+#     "status": "ok",
+#     "total_ms": 14,
+#     "hosted_mode": true,
+#     "components": {
+#       "d1":         { "status": "ok",       "latency_ms": 6 },
+#       "kv":         { "status": "ok",       "latency_ms": 5 },
+#       "killswitch": { "status": "ok",       "latency_ms": 3, "detail": "unset" },
+#       "queue":      { "status": "ok",       "latency_ms": 0, "detail": "binding present (no synthetic enqueue)" }
+#     }
+#   }
+#
+# When the killswitch is set, /health/deep returns 200 with
+# status='degraded' and the killswitch component shows 'degraded'.
+# When any binding is down, returns 503 with status='down'.
 
 # In a browser: sign in, go to /pricing, click "Upgrade to Pro".
 # Stripe Checkout should load. Use test card 4242 4242 4242 4242
@@ -97,7 +122,7 @@ Do this once, in both test mode and live mode.
 
 - Product name: `edgepush Pro`
 - Pricing: Recurring, $29 USD per month
-- Copy the **Price ID** (starts with `price_`) — this is
+- Copy the **Price ID** (starts with `price_`), this is
   `STRIPE_PRO_PRICE_ID`.
 
 ### 2. Create a webhook endpoint
@@ -112,7 +137,7 @@ Do this once, in both test mode and live mode.
   - `customer.subscription.deleted`
   - `invoice.payment_failed`
   - `invoice.payment_succeeded`
-- Copy the **signing secret** (starts with `whsec_`) — this is
+- Copy the **signing secret** (starts with `whsec_`), this is
   `STRIPE_WEBHOOK_SECRET`.
 
 ### 3. Test the webhook locally
@@ -154,12 +179,12 @@ incident.
 - [ ] The `.github/workflows/d1-backup.yml` workflow has run
       successfully at least once. Check the Actions tab.
 - [ ] `BACKUP_ENCRYPTION_KEY` is set in GitHub Actions secrets. The
-      backup workflow prints a warning if it's not — but that warning
+      backup workflow prints a warning if it's not, but that warning
       fires on an encrypted artifact nobody will read until they
       desperately need it.
 - [ ] `OPERATOR_EMAIL` is set and you've confirmed the address works
       by manually triggering the digest cron (see
-      [Daily operations — manual digest](#manual-digest-trigger)).
+      [Daily operations, manual digest](#manual-digest-trigger)).
 - [ ] You have a documented place where the kill-switch and replay
       commands live so you can copy-paste them at 2am.
 - [ ] The Terms of Service on edgepush.dev contains a clear data
@@ -181,13 +206,13 @@ is a valid position and much safer than `OSS + half-configured hosted`.
 
 You get an email at `OPERATOR_EMAIL` every day at 03:00 UTC IF the
 last 24h had any `worker_errors` rows or D1 is past the 7 GB warning
-threshold. A quiet day produces no email — that's by design. Don't
+threshold. A quiet day produces no email, that's by design. Don't
 train yourself to ignore the digest.
 
 The body format:
 
 ```
-edgepush daily digest — 2026-04-12T03:00:00.000Z
+edgepush daily digest, 2026-04-12T03:00:00.000Z
 
 worker_errors in last 24h: 17
   dispatch      12
@@ -201,7 +226,7 @@ most recent 5:
 
 D1 size: 2.81 GB / 10 GB cap (ok)
 
-— edgepush operator digest
+- edgepush operator digest
 ```
 
 Interpretation:
@@ -234,7 +259,7 @@ Workers → edgepush-api → Triggers → Cron Triggers → click the
 
 ### Answering a "my pushes aren't landing" support email
 
-1. Grep the email for an `appId` — customers usually paste it from
+1. Grep the email for an `appId`, customers usually paste it from
    the dashboard URL.
 2. Run the inspector:
    ```bash
@@ -245,10 +270,10 @@ Workers → edgepush-api → Triggers → Cron Triggers → click the
    broken), last 20 messages, and any `worker_errors` mentioning
    the appId.
 4. Common causes:
-   - **`apns: BROKEN — InvalidProviderToken`** → customer's `.p8` was
+   - **`apns: BROKEN. InvalidProviderToken`** → customer's `.p8` was
      revoked in the Apple Developer portal. They need to upload a
      fresh one.
-   - **`fcm: BROKEN — permission denied`** → customer's service
+   - **`fcm: BROKEN, permission denied`** → customer's service
      account lost the `cloudmessaging.messages:create` role. They
      need to restore it or upload a fresh service account JSON.
    - **All recent messages `failed` with `BadDeviceToken`** →
@@ -272,7 +297,7 @@ rolled back, flip the kill switch KV key. `/v1/send` will return 503
 pnpm --filter @edgepush/api exec wrangler kv key put \
   --binding=CACHE \
   --remote \
-  edgepush:killswitch:send "maintenance — fix rolling at 14:30 UTC"
+  edgepush:killswitch:send "maintenance, fix rolling at 14:30 UTC"
 ```
 
 The string value is returned to the caller as `detail`, so put
@@ -289,7 +314,7 @@ pnpm --filter @edgepush/api exec wrangler kv key delete \
 
 The kill switch takes effect within a couple of seconds (KV
 propagation). The queue consumer and the scheduled crons are NOT
-gated by the kill switch — they continue running. If the DB is the
+gated by the kill switch, they continue running. If the DB is the
 problem, you'll want to additionally unset the dispatch queue
 consumer from the Cloudflare dashboard (Workers → Queues →
 `edgepush-dispatch` → Pause).
@@ -315,7 +340,7 @@ complete the replay manually. The D1 update has already succeeded at
 that point.
 
 For **bulk** replay (an entire DLQ backlog from an outage), don't use
-this script — it re-enqueues one at a time. Query `worker_errors`
+this script, it re-enqueues one at a time. Query `worker_errors`
 for the relevant window:
 
 ```sql
@@ -338,7 +363,7 @@ pnpm --filter @edgepush/api exec wrangler rollback <deployment-id>
 ```
 
 Rollback is near-instant. If the bad deploy also included a D1
-migration, see [Migration rollback](#migration-rollback) next — you
+migration, see [Migration rollback](#migration-rollback) next, you
 typically want to roll back the code FIRST, then the migration, so
 the new-schema-expecting code isn't running against the old schema.
 
@@ -349,7 +374,7 @@ the new-schema-expecting code isn't running against the old schema.
 Drizzle generates forward-only migrations. For every migration under
 `apps/api/migrations/`, there is a hand-written SQL rollback under
 `apps/api/drizzle-rollback/` with the same filename. The rollback
-SQL is a destructive operation — it drops columns, drops tables, and
+SQL is a destructive operation, it drops columns, drops tables, and
 can't recover data that was written since the forward migration ran.
 
 ### Rollback procedure
@@ -422,7 +447,7 @@ If you lose the D1 database entirely, the restore procedure is:
      -out /tmp/restore.sql.gz
    ```
    If the backup was unencrypted (`BACKUP_ENCRYPTION_KEY` was unset
-   during the backup run), skip this step — you'll have a `.sql.gz`
+   during the backup run), skip this step, you'll have a `.sql.gz`
    directly.
 
 4. **Decompress:**
@@ -448,7 +473,7 @@ If you lose the D1 database entirely, the restore procedure is:
 Customer-visible downtime = (time since last backup) + (restore
 runtime). With nightly backups that's up to 24 hours of lost data
 plus about 5 minutes of restore work. That's the hosted tier's SLA
-floor — if you need tighter, upgrade to more frequent backups in
+floor, if you need tighter, upgrade to more frequent backups in
 the workflow.
 
 ---
@@ -461,7 +486,7 @@ CLI releases. The Worker and dashboard deploys are manual:
 ### Normal deploy (code only)
 
 ```bash
-# Typecheck everything first — turbo cache makes this fast
+# Typecheck everything first, turbo cache makes this fast
 pnpm typecheck
 pnpm test
 
@@ -475,13 +500,46 @@ pnpm --filter @edgepush/web deploy
 Order doesn't matter much as long as neither deploy introduces a
 breaking API contract in the same PR.
 
+### Deploy the self-host marketing worker
+
+The repo deploys a SECOND web worker called `edgepush-selfhost-marketing`
+on `selfhost.edgepush.dev`. It serves the same `.open-next/` bundle as
+the main dashboard but a `proxy.ts` rewrite makes `/` land on the
+`/selfhost` route instead of the SaaS landing. The wrangler config is
+at `apps/web/wrangler.selfhost.jsonc`.
+
+```bash
+cd apps/web
+
+# Build once (or use the existing .open-next/ from a recent main deploy)
+pnpm exec opennextjs-cloudflare build
+
+# Deploy the second worker against the same bundle
+pnpm exec wrangler deploy --config wrangler.selfhost.jsonc
+```
+
+Cloudflare auto-creates the DNS record for `selfhost.edgepush.dev` on
+first deploy. After that, every push to main auto-deploys the main
+worker via CF Workers Builds, but the selfhost worker stays at the
+last manually-deployed bundle. Re-run the wrangler.selfhost deploy
+whenever you want it to catch up. Or wire a second connected build in
+the CF dashboard pointing at the same repo with a custom build
+command:
+
+```
+pnpm --filter @edgepush/web exec opennextjs-cloudflare build && \
+pnpm --filter @edgepush/web exec wrangler deploy --config wrangler.selfhost.jsonc
+```
+
+That way both workers stay in lockstep automatically.
+
 ### Deploy with migrations
 
 When a PR includes a new file under `apps/api/migrations/`, the
 deploy order matters to avoid the new code hitting old schema (or
 vice versa).
 
-**If the migration is ADDITIVE** (new tables, new columns — migration
+**If the migration is ADDITIVE** (new tables, new columns, migration
 0002 is the canonical example):
 1. Apply the migration first: `pnpm --filter @edgepush/api db:migrate:remote`
 2. Then deploy the code: `pnpm --filter @edgepush/api deploy`
@@ -500,24 +558,24 @@ changes):
 
 ---
 
-## Appendix — secret lifecycle
+## Appendix: secret lifecycle
 
 | Secret | When to rotate | How |
 |---|---|---|
-| `ENCRYPTION_KEY` | Never rotate silently. Rotating invalidates every stored credential — customers must re-upload. Only rotate on suspected compromise, and announce it. | Generate new, update secret, run a migration that re-encrypts every `apns_credentials.private_key_ciphertext` row with the new key. |
+| `ENCRYPTION_KEY` | Never rotate silently. Rotating invalidates every stored credential, customers must re-upload. Only rotate on suspected compromise, and announce it. | Generate new, update secret, run a migration that re-encrypts every `apns_credentials.private_key_ciphertext` row with the new key. |
 | `BETTER_AUTH_SECRET` | Once per year, or on compromise. | `wrangler secret put`, then all active sessions are invalidated (users are signed out). |
-| `STRIPE_REF_HMAC_KEY` | Rarely. Rotating invalidates any in-flight Checkout sessions that have a signed client_reference_id but haven't completed yet. | `wrangler secret put`. In-flight sessions will fail the webhook HMAC check — re-attempts from the customer work fine. |
+| `STRIPE_REF_HMAC_KEY` | Rarely. Rotating invalidates any in-flight Checkout sessions that have a signed client_reference_id but haven't completed yet. | `wrangler secret put`. In-flight sessions will fail the webhook HMAC check, re-attempts from the customer work fine. |
 | `STRIPE_WEBHOOK_SECRET` | Only when you rotate the webhook in Stripe. | Rotate in Stripe first, then `wrangler secret put` within the overlap window. |
 | `RESEND_API_KEY` | When the key leaks or Resend rotates it. | `wrangler secret put`. No customer impact. |
 | `GITHUB_CLIENT_SECRET` | When GitHub's "Reset secret" is clicked or on compromise. | Rotate in GitHub first, then `wrangler secret put`. No active sessions are invalidated. |
-| `BACKUP_ENCRYPTION_KEY` | Never. Rotating makes old backups unreadable. Generate once, store offline, leave alone. | Only if compromised — and if it's compromised, your old backups were too. |
+| `BACKUP_ENCRYPTION_KEY` | Never. Rotating makes old backups unreadable. Generate once, store offline, leave alone. | Only if compromised, and if it's compromised, your old backups were too. |
 
 ---
 
 ## What's NOT in v1
 
 - No admin panel for the operator. You read worker_errors via `wrangler d1 execute`.
-- No Stripe Customer Portal. Customer cancellations come as email — you process them manually in the Stripe dashboard.
+- No Stripe Customer Portal. Customer cancellations come as email, you process them manually in the Stripe dashboard.
 - No per-customer usage dashboard for the operator. `scripts/operator/inspect-app.ts` is the closest thing.
 - No automated alerting beyond the daily digest + credential health emails. If the Worker itself is down, you find out the same way customers do.
 

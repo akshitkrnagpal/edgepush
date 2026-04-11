@@ -1,4 +1,4 @@
-# Design System — edgepush
+# Design System, edgepush
 
 Terminal-native, warmed up. A CLI tool with a web face.
 
@@ -22,9 +22,9 @@ Terminal-native, warmed up. A CLI tool with a web face.
 Two voices, one technical and one human, with nothing in between. The contrast IS the system.
 
 - **Display / Hero:** `JetBrains Mono` at 800 (ExtraBold). Huge sizes (80–120px). The monospace IS the headline. This is the signature move.
-- **Body:** `Satoshi` (Indian Type Foundry, free via Fontshare). Humanist grotesque. Warm, generous, not overused. Pairs with mono by contrast, not imitation. **Never Inter, Geist, Roboto, Helvetica, Arial, or Open Sans** — too saturated in the category.
+- **Body:** `Satoshi` (Indian Type Foundry, free via Fontshare). Humanist grotesque. Warm, generous, not overused. Pairs with mono by contrast, not imitation. **Never Inter, Geist, Roboto, Helvetica, Arial, or Open Sans**, too saturated in the category.
 - **UI / Labels / Chrome:** `JetBrains Mono` at 500 (Medium), uppercase, tracked `0.10–0.14em`, small (10–12px). Every small label in the UI should feel like a terminal flag or header.
-- **Data / Tables:** `JetBrains Mono` with `font-feature-settings: "tnum"` for tabular numerals. Same face as display — reinforces the voice.
+- **Data / Tables:** `JetBrains Mono` with `font-feature-settings: "tnum"` for tabular numerals. Same face as display, reinforces the voice.
 - **Code:** `JetBrains Mono` Regular. Same font everywhere, no per-context switching.
 - **Loading strategy:** Google Fonts for JetBrains Mono (`?family=JetBrains+Mono:wght@400;500;700;800`), Fontshare for Satoshi (`https://api.fontshare.com/v2/css?f[]=satoshi@400,500,700,900`). Both allow CDN. Self-host later if we want zero-third-party.
 
@@ -49,7 +49,7 @@ Two voices, one technical and one human, with nothing in between. The contrast I
 
 One accent. Signal orange. Everything else is black, bone, and grain.
 
-- **Approach:** Restrained. The palette is black + bone + one saturated accent. Color is rare and meaningful — every orange element is a signal, never decoration.
+- **Approach:** Restrained. The palette is black + bone + one saturated accent. Color is rare and meaningful, every orange element is a signal, never decoration.
 - **Philosophy:** No gradient accent text. No cyan. No emerald. No purple. No violet. The category is saturated with those; we take the gap.
 
 ### Core Palette
@@ -81,7 +81,7 @@ Muted and mono-adjacent. They appear only in status contexts (log lines, badges,
 
 ### Dark mode
 
-**There is no light mode.** edgepush is dark-only by design — it matches the audience (developers who live in dark terminals) and the positioning (infrastructure, not consumer). Do not add a light mode without explicit product discussion.
+**There is no light mode.** edgepush is dark-only by design, it matches the audience (developers who live in dark terminals) and the positioning (infrastructure, not consumer). Do not add a light mode without explicit product discussion.
 
 ### Decoration
 
@@ -107,7 +107,7 @@ Muted and mono-adjacent. They appear only in status contexts (log lines, badges,
 | `space-5xl` | 96px | hero top/bottom |
 
 - **Density target for dashboard:** a real data table should show ≥12 rows above the fold on a 1440×900 viewport. Row height: ~40px. Cell padding: 10px 14px.
-- **Marketing pages** get more breathing room (`space-4xl` / `space-5xl` between sections), but never feel spacious — always feel purposeful.
+- **Marketing pages** get more breathing room (`space-4xl` / `space-5xl` between sections), but never feel spacious, always feel purposeful.
 
 ## Layout
 
@@ -133,9 +133,9 @@ Muted and mono-adjacent. They appear only in status contexts (log lines, badges,
 
 Square corners (max `2px` radius). Mono label. Usually prefixed with `$` for primary actions.
 
-- **Primary (`btn-primary`)** — `background: #F5F3EE; color: #000;`. The default CTA. Hover: `background: #FF6B1A;`.
-- **Accent (`btn-accent`)** — `background: #FF6B1A; color: #000;`. For destructive-adjacent or high-signal actions (`send push`, `rotate key`).
-- **Ghost (`btn-ghost`)** — `background: transparent; border: 1px solid #262626; color: #F5F3EE;`. Hover: `border-color: #F5F3EE;`.
+- **Primary (`btn-primary`)**, `background: #F5F3EE; color: #000;`. The default CTA. Hover: `background: #FF6B1A;`.
+- **Accent (`btn-accent`)**, `background: #FF6B1A; color: #000;`. For destructive-adjacent or high-signal actions (`send push`, `rotate key`).
+- **Ghost (`btn-ghost`)**, `background: transparent; border: 1px solid #262626; color: #F5F3EE;`. Hover: `border-color: #F5F3EE;`.
 - **Disabled:** `opacity: 0.4; pointer-events: none;`. Never grey-out with a different color.
 - **Size:** Default `padding: 10px 18px; font-size: 12px;`. Compact `8px 14px; font-size: 11px;`.
 
@@ -149,10 +149,10 @@ Square corners (max `2px` radius). Mono label. Usually prefixed with `$` for pri
 ### Status badges
 
 ```
-● DELIVERED   — border + text #6BCB77 (success)
-● RETRY 1/3   — border + text #F0DB4F (warning)
-● FAILED      — border + text #FF4F4F (error)
-○ QUEUED      — border + text #6B6B6B (muted, hollow dot)
+● DELIVERED    border + text #6BCB77 (success)
+● RETRY 1/3    border + text #F0DB4F (warning)
+● FAILED       border + text #FF4F4F (error)
+○ QUEUED       border + text #6B6B6B (muted, hollow dot)
 ```
 
 1px border, mono uppercase, tracked 0.12em, `padding: 4px 10px`. Dot character is part of the text content, not a separate icon element.
@@ -186,7 +186,7 @@ The design has a voice and so does the copy. Both are technical, direct, no mark
 
 - Purple or violet gradients as an accent.
 - Cyan or emerald accent colors (the category is full; we chose orange deliberately).
-- Gradient accent text (`bg-clip-text text-transparent`) — we did this before, it's generic.
+- Gradient accent text (`bg-clip-text text-transparent`), we did this before, it's generic.
 - Rounded-full pill buttons for primary CTAs.
 - Centered hero text.
 - Three-column feature grid with circular colored icons.
@@ -198,14 +198,14 @@ The design has a voice and so does the copy. Both are technical, direct, no mark
 
 ## Implementation notes
 
-- **Current state:** `apps/web/src/app/globals.css` has a Geist setup that needs to be replaced. `body { font-family: Arial, Helvetica, sans-serif; }` contradicts the Geist imports — delete that entirely when migrating.
+- **Current state:** `apps/web/src/app/globals.css` has a Geist setup that needs to be replaced. `body { font-family: Arial, Helvetica, sans-serif; }` contradicts the Geist imports, delete that entirely when migrating.
 - **Tailwind v4:** the codebase uses `@tailwindcss/postcss` with `@theme inline`. Define the tokens in the `@theme inline` block so they're available as Tailwind utilities (`bg-bg`, `text-accent`, `font-mono`, `font-sans`).
-- **Migration scope:** The landing page (`apps/web/src/app/page.tsx`) currently uses `rounded-full` CTAs, `from-emerald-400 to-cyan-400` gradient text, and rounded-xl cards. These all need to go when this system lands. A separate PR should do the migration — DO NOT silently rewrite the app while this file is being created.
+- **Migration scope:** The landing page (`apps/web/src/app/page.tsx`) currently uses `rounded-full` CTAs, `from-emerald-400 to-cyan-400` gradient text, and rounded-xl cards. These all need to go when this system lands. A separate PR should do the migration. DO NOT silently rewrite the app while this file is being created.
 
 ## Design artifacts
 
-- **Preview page (HTML specimen):** `/tmp/edgepush-design-preview-1775867327.html` — full system rendered with real components. Open in a browser to see it live. This is not canonical; DESIGN.md is canonical.
-- **Research screenshots:** `/tmp/edgepush-research/{01-expo, 02-knock, 03-onesignal, 04-resend, 05-turso}.png` — competitive landscape that informed the direction.
+- **Preview page (HTML specimen):** `/tmp/edgepush-design-preview-1775867327.html`, full system rendered with real components. Open in a browser to see it live. This is not canonical; DESIGN.md is canonical.
+- **Research screenshots:** `/tmp/edgepush-research/{01-expo, 02-knock, 03-onesignal, 04-resend, 05-turso}.png`, competitive landscape that informed the direction.
 
 ## Decisions Log
 
@@ -216,5 +216,5 @@ The design has a voice and so does the copy. Both are technical, direct, no mark
 | 2026-04-11 | Satoshi for body, not Geist/Inter | Geist and Inter are overused to the point of being invisible. Satoshi is free, warm, humanist, and adds a second voice that isn't just "a different grotesque". |
 | 2026-04-11 | Dark-only, no light mode | Audience is developers on dark terminals; positioning is infrastructure. A light mode would dilute the voice and double the maintenance surface for no user benefit. Revisit only if a real user signal demands it. |
 | 2026-04-11 | 4px base unit, dense dashboard | Users are backend/infra devs who want data density, not whitespace. A row should fit ≥12 entries above the fold on 1440×900. |
-| 2026-04-11 | ASCII chrome (`│ ├ ─ ● ○`) for UI dividers and status | Handcrafted terminal identity that no direct competitor has. Small risk of rendering oddly on some fonts — mitigated by pinning JetBrains Mono. |
+| 2026-04-11 | ASCII chrome (`│ ├ ─ ● ○`) for UI dividers and status | Handcrafted terminal identity that no direct competitor has. Small risk of rendering oddly on some fonts, mitigated by pinning JetBrains Mono. |
 | 2026-04-11 | Square-first border radius (0–2px) | Rounded-xl cards and pill buttons are AI-slop table stakes now. Square corners are a deliberate departure that reinforces the terminal voice. |

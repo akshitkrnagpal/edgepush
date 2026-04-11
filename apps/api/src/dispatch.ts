@@ -135,14 +135,14 @@ async function processAppBatch(
       .where(eq(messages.id, row.id));
 
     // Shadow-log the failure for operator visibility. Does NOT change
-    // retry semantics — the message has already been marked failed and
+    // retry semantics, the message has already been marked failed and
     // the queue will not re-dispatch. This exists so the daily digest
     // cron can surface patterns (many fails on one app, one device
     // token repeatedly invalid, etc.) that console.error would lose.
     //
     // Transient/token-invalid errors are noisy and expected, so we
     // only log the definitively-failed case where tokenInvalid is
-    // false — those are the ones that hint at operator-level problems.
+    // false, those are the ones that hint at operator-level problems.
     if (!result.ok && !result.tokenInvalid) {
       await logWorkerError(db, {
         kind: "dispatch",
@@ -222,7 +222,7 @@ async function loadApnsCredentials(
 ) {
   // bundleId is derived from apps.packageName, not from the (deprecated)
   // apns_credentials.bundle_id column. This is the post-normalization
-  // read path — one source of truth.
+  // read path, one source of truth.
   const row = await db
     .select({
       keyId: apnsCredentials.keyId,
@@ -314,7 +314,7 @@ export async function handleDlq(
         timestamp: msg.timestamp.getTime(),
       },
     });
-    // Ack regardless — the DLQ is observability-only. If logging
+    // Ack regardless, the DLQ is observability-only. If logging
     // failed, logWorkerError already swallowed the error. Retrying a
     // dead-letter just loops forever.
     msg.ack();

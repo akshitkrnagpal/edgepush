@@ -1,5 +1,5 @@
 /**
- * Billing routes — hosted tier only.
+ * Billing routes, hosted tier only.
  *
  * All endpoints here are gated on isHosted(env). Self-hosters get a 501
  * if they hit them. The Checkout session creation endpoint is the sole
@@ -56,7 +56,7 @@ billingRouter.get("/subscription", async (c) => {
 });
 
 /**
- * POST /checkout — create a Stripe Checkout session and return the URL
+ * POST /checkout, create a Stripe Checkout session and return the URL
  * the client should redirect to. The session carries a signed
  * client_reference_id so the webhook can look the user up safely later.
  */
@@ -69,7 +69,7 @@ billingRouter.post("/checkout", async (c) => {
       {
         error: "billing_unavailable",
         detail:
-          "this edgepush instance is running in self-host mode — there is nothing to upgrade",
+          "this edgepush instance is running in self-host mode, there is nothing to upgrade",
       },
       501,
     );
@@ -84,7 +84,7 @@ billingRouter.post("/checkout", async (c) => {
       {
         error: "billing_misconfigured",
         detail:
-          "Stripe environment variables are missing — operator needs to configure STRIPE_SECRET_KEY, STRIPE_PRO_PRICE_ID, STRIPE_REF_HMAC_KEY",
+          "Stripe environment variables are missing, operator needs to configure STRIPE_SECRET_KEY, STRIPE_PRO_PRICE_ID, STRIPE_REF_HMAC_KEY",
       },
       500,
     );

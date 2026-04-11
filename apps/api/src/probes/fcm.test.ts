@@ -1,7 +1,7 @@
 /**
  * FCM probe unit tests.
  *
- * FCM is two-step — OAuth2 then messages:send. We mock both round
+ * FCM is two-step. OAuth2 then messages:send. We mock both round
  * trips with a sequence of responses keyed off the URL.
  *
  * Critical truth table we're locking down:
@@ -218,7 +218,7 @@ describe("probeFcmCredentials", () => {
   });
 
   it("returns broken when service account JSON is malformed", async () => {
-    // No fetch mock needed — JSON.parse fails first.
+    // No fetch mock needed. JSON.parse fails first.
     const result = await probeFcmCredentials({
       serviceAccountJson: "not json",
       projectId: "edgepush-test",

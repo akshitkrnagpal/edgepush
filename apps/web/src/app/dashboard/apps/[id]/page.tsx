@@ -40,7 +40,7 @@ function deriveHealth(row: {
   }
   // Topic mismatch is stored in lastCheckError text by the probe.
   // We detect it so we can render it with warning color instead of
-  // accent (broken) color — it's a config issue, not a creds issue.
+  // accent (broken) color, it's a config issue, not a creds issue.
   const err = row.lastCheckError ?? "credential broken";
   if (err.toLowerCase().includes("topic")) {
     return { state: "topic_mismatch", checkedAt: row.lastCheckedAt, error: err };
@@ -143,7 +143,7 @@ export default function AppDetailPage(props: {
                   setNewKey(null);
                   // After the user copies their first API key, bring the
                   // Recent deliveries panel into view so their first send
-                  // is already in frame — zero clicks to "holy shit it
+                  // is already in frame, zero clicks to "holy shit it
                   // works." Single trigger: we set newKey back to null
                   // above, so dismissing again later does nothing.
                   requestAnimationFrame(() => {
@@ -214,7 +214,7 @@ export default function AppDetailPage(props: {
             </div>
             {!apiKeys.data || apiKeys.data.length === 0 ? (
               <div className="border border-dashed border-rule-strong px-6 py-10 text-center font-mono text-[12px] text-muted">
-                <span className="text-accent">○</span> no api keys — create one
+                <span className="text-accent">○</span> no api keys, create one
                 to start sending pushes
               </div>
             ) : (
@@ -335,7 +335,7 @@ export default function AppDetailPage(props: {
                   </div>
                   <p className="mt-4 font-sans text-[13px] text-muted-strong">
                     copy the example from your api key and send your first
-                    push — it&apos;ll land here
+                    push, it&apos;ll land here
                   </p>
                 </div>
               )}

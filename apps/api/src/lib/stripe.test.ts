@@ -1,7 +1,7 @@
 /**
  * Stripe helper unit tests.
  *
- * Covers the cryptographic code in lib/stripe.ts — the parts most
+ * Covers the cryptographic code in lib/stripe.ts, the parts most
  * likely to silently break a billing flow if they regress:
  *
  *   - signClientReferenceId + verifyClientReferenceId roundtrip
@@ -11,7 +11,7 @@
  *   - verifyWebhookSignature rejects tampered bodies
  *   - verifyWebhookSignature rejects missing/malformed headers
  *
- * These run under plain Node — crypto.subtle is a global on Node 20+.
+ * These run under plain Node, crypto.subtle is a global on Node 20+.
  */
 
 import { describe, expect, it } from "vitest";
@@ -126,7 +126,7 @@ describe("verifyWebhookSignature", () => {
     const body = '{"id":"evt_test","type":"checkout.session.completed"}';
     const ts = Math.floor(Date.now() / 1000);
     const header = await signStripeWebhook(ts, body);
-    // Verify against a different body — signature should fail.
+    // Verify against a different body, signature should fail.
     const tampered = '{"id":"evt_attacker","type":"checkout.session.completed"}';
     const result = await verifyWebhookSignature(secret, header, tampered);
     expect(result).toBe(false);

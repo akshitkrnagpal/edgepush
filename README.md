@@ -10,7 +10,7 @@ If you ship a mobile app and you've ever felt weird about handing your APNs key 
 
 ## Status
 
-**v0.1, launch-ready.** Working end to end — send, dispatch, receipts, webhooks, dashboard, credential health probes, monthly quotas, Stripe billing, nightly backups. APIs may shift before 1.0. See [`CHANGELOG.md`](./CHANGELOG.md) for the full list of what landed and what was deliberately deferred.
+**v0.1, launch-ready.** Working end to end, send, dispatch, receipts, webhooks, dashboard, credential health probes, monthly quotas, Stripe billing, nightly backups. APIs may shift before 1.0. See [`CHANGELOG.md`](./CHANGELOG.md) for the full list of what landed and what was deliberately deferred.
 
 ## Features
 
@@ -33,7 +33,7 @@ If you ship a mobile app and you've ever felt weird about handing your APNs key 
 ### Billing (hosted tier)
 - Stripe Checkout with HMAC-signed `client_reference_id` (no cardholder-email-vs-signup-email bug class)
 - 5-event webhook handler with idempotency dedup, 5-minute replay window, raw-fetch (no `stripe` npm package)
-- Monthly send counter with atomic reservation — race-safe on concurrent sends at the quota boundary
+- Monthly send counter with atomic reservation, race-safe on concurrent sends at the quota boundary
 - Plan gating via `HOSTED_MODE` env var: `false` means unlimited (self-host), `true` enforces the Free / Pro limits
 
 ### Developer + operator experience
@@ -47,7 +47,7 @@ If you ship a mobile app and you've ever felt weird about handing your APNs key 
 
 ## Hosted
 
-The fastest way to try it is the hosted instance at [edgepush.dev](https://edgepush.dev). Sign in with GitHub, create an app, upload credentials, send a test push from the dashboard. No credit card on the free tier. The Pro tier is $29/mo — see [`/pricing`](https://edgepush.dev/pricing).
+The fastest way to try it is the hosted instance at [edgepush.dev](https://edgepush.dev). Sign in with GitHub, create an app, upload credentials, send a test push from the dashboard. No credit card on the free tier. The Pro tier is $29/mo, see [`/pricing`](https://edgepush.dev/pricing).
 
 If you'd rather run it yourself, [`SELFHOST.md`](./SELFHOST.md) is the full guide. If you're running your OWN hosted tier with billing (i.e., you want to sell an edgepush deployment to someone), [`OPERATOR.md`](./OPERATOR.md) is the production runbook.
 
@@ -72,7 +72,7 @@ const receipt = await client.getReceipt(ticket.id);
 console.log(receipt.status); // "delivered" | "failed" | "queued"
 ```
 
-The SDK works in any environment with `fetch`: Node 18+, Bun, Deno, Cloudflare Workers, Vercel, browsers. Every field above maps directly to the corresponding APNs or FCM payload — no proprietary token format, no abstracted-away headers.
+The SDK works in any environment with `fetch`: Node 18+, Bun, Deno, Cloudflare Workers, Vercel, browsers. Every field above maps directly to the corresponding APNs or FCM payload, no proprietary token format, no abstracted-away headers.
 
 ## Self-host on Cloudflare
 
@@ -105,7 +105,7 @@ pnpm deploy
 cd ../web && pnpm deploy
 ```
 
-Self-host runs with `HOSTED_MODE=false` — unlimited apps and events, no billing gates, no credential probe rate-limit concerns from the hosted tier. Everything else (SDK, CLI, API, webhooks, dashboard, DLQ, probe cron) works the same as `edgepush.dev`.
+Self-host runs with `HOSTED_MODE=false`, unlimited apps and events, no billing gates, no credential probe rate-limit concerns from the hosted tier. Everything else (SDK, CLI, API, webhooks, dashboard, DLQ, probe cron) works the same as `edgepush.dev`.
 
 If you plan to run your own paid tier (Stripe Checkout, billing webhooks, operator digest, backups), also read [`OPERATOR.md`](./OPERATOR.md).
 
@@ -193,13 +193,13 @@ edgepush receipt <id>
 
 PRs welcome. The highest-leverage areas right now are:
 
-- **Integration tests** for the send path, dispatch consumer, and account-delete cascade (v0.1 has 70 pure-function unit tests but no D1-backed integration tests yet — see `CHANGELOG.md` "Known not-yet-landed" for context)
+- **Integration tests** for the send path, dispatch consumer, and account-delete cascade (v0.1 has 70 pure-function unit tests but no D1-backed integration tests yet, see `CHANGELOG.md` "Known not-yet-landed" for context)
 - **Mobile SDK examples**: React Native, native iOS, native Android
-- **Self-host troubleshooting** — if you hit something that's not in `SELFHOST.md`'s Troubleshooting section, open an issue with the fix
+- **Self-host troubleshooting**, if you hit something that's not in `SELFHOST.md`'s Troubleshooting section, open an issue with the fix
 
 Open an issue first if you're planning anything large so we can talk about scope. All contributions to the server (`apps/api`) or dashboard (`apps/web`) land under AGPL-3.0; contributions to the SDK/CLI/shared packages stay MIT. See [`COMMERCIAL.md`](./COMMERCIAL.md) for the dual-license rationale.
 
-Code style is enforced by eslint and prettier defaults. Run `pnpm lint && pnpm typecheck && pnpm test && pnpm build` before pushing — all four should be green.
+Code style is enforced by eslint and prettier defaults. Run `pnpm lint && pnpm typecheck && pnpm test && pnpm build` before pushing, all four should be green.
 
 ## License
 
@@ -210,4 +210,4 @@ Dual licensed:
 
 The SDK and CLI are MIT so you can embed them in a closed-source backend or mobile app without AGPL obligations. The server and dashboard are AGPL so nobody can fork edgepush into a closed-source competing hosted service.
 
-See [`COMMERCIAL.md`](./COMMERCIAL.md) for the commercial license option (rare — most users never need it).
+See [`COMMERCIAL.md`](./COMMERCIAL.md) for the commercial license option (rare, most users never need it).

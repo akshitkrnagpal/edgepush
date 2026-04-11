@@ -1,6 +1,6 @@
 #!/usr/bin/env bun
 /**
- * Operator script — re-enqueue a dead-lettered message.
+ * Operator script, re-enqueue a dead-lettered message.
  *
  * When a message ends up in the DLQ, the dispatch consumer has given
  * up after max_retries. The daily operator digest surfaces the
@@ -98,7 +98,7 @@ try {
     { stdio: ["ignore", "pipe", "inherit"] },
   );
   console.log(
-    `[replay-dlq] re-enqueued to edgepush-dispatch — check Recent Deliveries in ~5s`,
+    `[replay-dlq] re-enqueued to edgepush-dispatch, check Recent Deliveries in ~5s`,
   );
 } catch (err) {
   console.error("[replay-dlq] queue publish failed:", err);

@@ -14,14 +14,14 @@ the [`LICENSE`](./LICENSE) file for the full text.
 - You can modify the source code for any purpose.
 - You can distribute modified versions.
 - You must publish the source of any modified version that you make available
-  to users over a network (this is the "affero" clause — what separates AGPL
+  to users over a network (this is the "affero" clause, what separates AGPL
   from plain GPL).
 - Any derivative work must also be licensed under AGPL-3.0.
 
 **What AGPL-3.0 does NOT prevent:**
 
 - It does not stop you from self-hosting edgepush to power your own apps.
-- It does not stop you from reselling access to an AGPL-licensed instance —
+- It does not stop you from reselling access to an AGPL-licensed instance -
   as long as you publish any modifications you make.
 
 If AGPL-3.0 works for your use case, you do not need a commercial license.
@@ -31,12 +31,12 @@ Just deploy edgepush and go.
 
 The following packages are published to npm under the **MIT license**:
 
-- [`@edgepush/sdk`](./packages/sdk) — server SDK for sending push notifications
-- [`@edgepush/cli`](./packages/cli) — command line interface
-- [`@edgepush/shared`](./packages/shared) — shared types consumed by the SDK
+- [`@edgepush/sdk`](./packages/sdk), server SDK for sending push notifications
+- [`@edgepush/cli`](./packages/cli), command line interface
+- [`@edgepush/shared`](./packages/shared), shared types consumed by the SDK
 
 You can embed these in closed-source applications without AGPL obligations.
-The MIT licensing is intentional and permanent — the SDK is meant to be
+The MIT licensing is intentional and permanent, the SDK is meant to be
 depended on from any project, proprietary or open.
 
 ## When do you need a commercial license?
@@ -65,7 +65,7 @@ To request a commercial license, email **hello@edgepush.dev** with:
 - Your company name
 - A one-paragraph description of how you plan to use edgepush
 - Which specific AGPL obligation you're trying to avoid
-- The scale you expect to operate at (roughly — users, events/month, apps)
+- The scale you expect to operate at (roughly, users, events/month, apps)
 
 I'll respond within 3 business days with next steps.
 

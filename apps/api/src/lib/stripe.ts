@@ -1,7 +1,7 @@
 /**
  * Stripe integration for the hosted edgepush tier.
  *
- * We deliberately do NOT use the `stripe` npm package — it's Node-heavy
+ * We deliberately do NOT use the `stripe` npm package, it's Node-heavy
  * and drags in a lot of code that Cloudflare Workers doesn't need. Every
  * Stripe API call is a plain fetch() to api.stripe.com, and every webhook
  * signature is verified with Web Crypto.
@@ -23,7 +23,7 @@
  *   We pass a signed "<userId>.<hmac>" string to Stripe as the
  *   client_reference_id so that when the webhook fires, we can look up
  *   the user without trusting the Stripe-supplied email (which may not
- *   match the edgepush sign-in email — cardholders pay with a different
+ *   match the edgepush sign-in email, cardholders pay with a different
  *   email all the time). The HMAC prevents an attacker from forging a
  *   session with an arbitrary user ID.
  */
@@ -38,7 +38,7 @@ const STRIPE_API = "https://api.stripe.com/v1";
 
 // ----- Client reference ID signing (HMAC-SHA256) -----
 
-/** URL-safe base64 (no padding) — matches Stripe's 200-char client_reference_id charset. */
+/** URL-safe base64 (no padding), matches Stripe's 200-char client_reference_id charset. */
 function base64url(bytes: ArrayBuffer): string {
   const b64 = btoa(String.fromCharCode(...new Uint8Array(bytes)));
   return b64.replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
@@ -72,7 +72,7 @@ export async function signClientReferenceId(
 
 /**
  * Parse `<userId>.<hmac>` and verify the HMAC. Returns the userId only if
- * the signature matches. Never throws — returns null on any parse or
+ * the signature matches. Never throws, returns null on any parse or
  * verification failure so the webhook handler can reject the event cleanly.
  */
 export async function verifyClientReferenceId(
@@ -310,7 +310,7 @@ export async function upsertSubscriptionFromStripe(
 
 /**
  * Minimal shape of a Stripe Subscription. We only type the fields we
- * actually read. The stripe-node package has a full type — we can't use
+ * actually read. The stripe-node package has a full type, we can't use
  * it on Workers, so this hand-rolled subset is the tradeoff.
  */
 export interface StripeSubscriptionObject {
@@ -361,7 +361,7 @@ function mapPriceIdToPlan(
   priceId: string | undefined,
 ): "free" | "pro" | "enterprise" | "selfhost" {
   // In v1 we only sell one paid tier. If Stripe ever returns a price we
-  // don't recognize, map it to "pro" as the safe default — the admin
+  // don't recognize, map it to "pro" as the safe default, the admin
   // will fix it manually in Stripe and the subscription will update on
   // the next webhook.
   if (!priceId) return "free";

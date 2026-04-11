@@ -83,7 +83,7 @@ export default function ApnsCredentialsPage(props: {
           />
           <p className="font-mono text-[11px] tracking-[0.02em] text-muted">
             <span className="text-accent">●</span> bundle_id is derived from
-            this app&apos;s package_name — no need to type it.
+            this app&apos;s package_name, no need to type it.
           </p>
           <div>
             <label className="mb-2 block font-mono text-[10px] uppercase tracking-[0.12em] text-muted">

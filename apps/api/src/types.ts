@@ -19,7 +19,7 @@ export interface Env {
   RESEND_API_KEY?: string;
   EMAIL_FROM?: string;
   /**
-   * Destination for the daily operator digest email. Optional —
+   * Destination for the daily operator digest email. Optional -
    * if unset, the digest cron logs to console.warn and skips sending.
    */
   OPERATOR_EMAIL?: string;
@@ -31,11 +31,11 @@ export interface Env {
    * When "true": plan/quota/retention checks are enforced.
    * When "false": all gates bypass, unlimited apps/events/retention.
    *
-   * Read via isHosted(env) from lib/mode.ts — never compare the string directly.
+   * Read via isHosted(env) from lib/mode.ts, never compare the string directly.
    */
   HOSTED_MODE?: string;
 
-  // Stripe billing (hosted tier only). All optional — self-host leaves
+  // Stripe billing (hosted tier only). All optional, self-host leaves
   // them unset and the billing endpoints return 501 gracefully.
   STRIPE_SECRET_KEY?: string;
   STRIPE_WEBHOOK_SECRET?: string;

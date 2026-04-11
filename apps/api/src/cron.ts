@@ -8,8 +8,8 @@
  * ┌───────────────────┬─────────────────────────────────────────────────┐
  * │ cron expression   │ handler                                         │
  * ├───────────────────┼─────────────────────────────────────────────────┤
- * │ 0 * * * *         │ runProbeCycle — credential health probes        │
- * │ 0 3 * * *         │ runOperatorDigest — daily worker_errors digest  │
+ * │ 0 * * * *         │ runProbeCycle, credential health probes        │
+ * │ 0 3 * * *         │ runOperatorDigest, daily worker_errors digest  │
  * │                   │   + D1 size check                                │
  * │ (future)          │ runRetentionPurge, runR2Archive                  │
  * └───────────────────┴─────────────────────────────────────────────────┘
@@ -72,7 +72,7 @@ export async function handleScheduled(
       await runOperatorDigest(env);
       return;
     default:
-      console.warn(`[cron] unknown cron "${event.cron}" — no handler wired`);
+      console.warn(`[cron] unknown cron "${event.cron}", no handler wired`);
   }
 }
 
@@ -82,12 +82,12 @@ export async function handleScheduled(
  * Daily 03:00 UTC operator digest.
  *
  *   1. Count worker_errors rows from the last 24h, grouped by kind.
- *   2. Check D1 size via PRAGMA — alert if > 7 GB (of the 10 GB hard cap).
+ *   2. Check D1 size via PRAGMA, alert if > 7 GB (of the 10 GB hard cap).
  *   3. If anything is worth reporting, email OPERATOR_EMAIL with a
  *      plain-text summary.
  *
  * "Worth reporting" = either at least one worker_errors row OR D1 is
- * past the 7 GB warning threshold. A clean 24h is silent — we don't
+ * past the 7 GB warning threshold. A clean 24h is silent, we don't
  * want to train the operator to ignore the digest.
  *
  * If OPERATOR_EMAIL is unset we log to console.warn and skip sending.
@@ -118,7 +118,7 @@ export async function runOperatorDigest(env: Env): Promise<void> {
     byKind.set(row.kind, (byKind.get(row.kind) ?? 0) + 1);
   }
 
-  // D1 size check — PRAGMA page_count + PRAGMA page_size. Drizzle
+  // D1 size check. PRAGMA page_count + PRAGMA page_size. Drizzle
   // doesn't have a first-class helper for pragmas; use raw SQL.
   let dbSizeBytes: number | null = null;
   try {
@@ -141,13 +141,13 @@ export async function runOperatorDigest(env: Env): Promise<void> {
 
   const shouldReport = recent.length > 0 || d1OverWarning;
   if (!shouldReport) {
-    // Clean day — silence is intentional.
+    // Clean day, silence is intentional.
     return;
   }
 
   if (!env.OPERATOR_EMAIL) {
     console.warn(
-      `[cron] operator digest has ${recent.length} worker_errors rows and d1SizeBytes=${dbSizeBytes}, but OPERATOR_EMAIL is not set — skipping email`,
+      `[cron] operator digest has ${recent.length} worker_errors rows and d1SizeBytes=${dbSizeBytes}, but OPERATOR_EMAIL is not set, skipping email`,
     );
     return;
   }
@@ -155,7 +155,7 @@ export async function runOperatorDigest(env: Env): Promise<void> {
   // Build the plain-text body. Keeping it text-only so the operator
   // can read it from a terminal mail client. No HTML variant.
   const lines: string[] = [];
-  lines.push(`edgepush daily digest — ${new Date(now).toISOString()}`);
+  lines.push(`edgepush daily digest, ${new Date(now).toISOString()}`);
   lines.push("");
 
   if (recent.length > 0) {
@@ -183,7 +183,7 @@ export async function runOperatorDigest(env: Env): Promise<void> {
   if (d1OverWarning) {
     const gb = ((dbSizeBytes ?? 0) / (1024 * 1024 * 1024)).toFixed(2);
     lines.push(`⚠ D1 size: ${gb} GB (over 7 GB warning, 10 GB cap)`);
-    lines.push("  — consider running retention purge manually or bumping retention");
+    lines.push("  consider running retention purge manually or bumping retention");
     lines.push("");
   } else if (dbSizeBytes != null) {
     const gb = (dbSizeBytes / (1024 * 1024 * 1024)).toFixed(2);
@@ -191,12 +191,12 @@ export async function runOperatorDigest(env: Env): Promise<void> {
     lines.push("");
   }
 
-  lines.push("— edgepush operator digest");
+  lines.push("- edgepush operator digest");
 
   try {
     await sendEmail(env, {
       to: env.OPERATOR_EMAIL,
-      subject: `[edgepush] daily digest — ${recent.length} errors${d1OverWarning ? " + d1 warning" : ""}`,
+      subject: `[edgepush] daily digest, ${recent.length} errors${d1OverWarning ? " + d1 warning" : ""}`,
       text: lines.join("\n"),
     });
   } catch (err) {
@@ -297,7 +297,7 @@ export async function runProbeCycle(env: Env): Promise<void> {
     for (const u of users) userEmailByUserId.set(u.id, u.email);
   }
 
-  // Run probes with a small concurrency cap. No fancy scheduler — just
+  // Run probes with a small concurrency cap. No fancy scheduler, just
   // chunk the work into groups of PROBE_CONCURRENCY and await each group.
   const apnsResults = await probeBatch(dueApnsRows, PROBE_CONCURRENCY, async (row) => {
     try {
@@ -390,18 +390,18 @@ export async function runProbeCycle(env: Env): Promise<void> {
   }
 
   // On self-host, we still run the probe (it's useful!) but we don't
-  // need to be shy about it — there's nothing to charge for and nothing
+  // need to be shy about it, there's nothing to charge for and nothing
   // to rate-limit beyond the concurrency cap above. Log a marker so
   // self-host operators can grep for "probe cycle" in their logs.
   if (!isHosted(env)) {
     console.log(
-      `[probe] self-host cycle complete — apns=${dueApnsRows.length} fcm=${dueFcmRows.length}`,
+      `[probe] self-host cycle complete, apns=${dueApnsRows.length} fcm=${dueFcmRows.length}`,
     );
   }
 }
 
 /**
- * Transient results don't flip the stored state — they leave last_check_ok
+ * Transient results don't flip the stored state, they leave last_check_ok
  * untouched so the dashboard keeps showing the last known value. OK and
  * broken flip the state and bump last_checked_at so the cadence window
  * moves forward.
@@ -460,7 +460,7 @@ async function writeFcmResult(
 
 /**
  * Email eligibility check. We email when:
- *   - the probe result is "broken" (NOT topic_mismatch — that's a config
+ *   - the probe result is "broken" (NOT topic_mismatch, that's a config
  *     issue and surfaces in the dashboard only)
  *   - we haven't already emailed this credential within ALERT_DEDUP_MS
  */
@@ -498,7 +498,7 @@ async function notifyBrokenApns(
     `  2. Go to Credentials > APNs`,
     `  3. Upload a fresh .p8 key from the Apple Developer portal`,
     ``,
-    `edgepush — open source push notifications`,
+    `edgepush, open source push notifications`,
   ].join("\n");
 
   await sendEmail(env, { to, subject, text });
@@ -529,7 +529,7 @@ async function notifyBrokenFcm(
     `  3. Upload a fresh service account JSON from Firebase Console`,
     `     (or restore the cloudmessaging.messages:create role if you revoked it)`,
     ``,
-    `edgepush — open source push notifications`,
+    `edgepush, open source push notifications`,
   ].join("\n");
 
   await sendEmail(env, { to, subject, text });
@@ -538,7 +538,7 @@ async function notifyBrokenFcm(
 /**
  * Run `worker` over each item in `items` with at most `concurrency`
  * in-flight at a time. Results come back in the original order. No fancy
- * scheduler — just sequential chunks.
+ * scheduler, just sequential chunks.
  */
 async function probeBatch<T, R>(
   items: T[],

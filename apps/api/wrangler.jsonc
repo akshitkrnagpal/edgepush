@@ -87,8 +87,8 @@
   ],
 
   // Scheduled handlers. See src/cron.ts for the dispatch table.
-  //   "0 * * * *"  — hourly credential health probe
-  //   "0 3 * * *"  — daily 03:00 UTC operator digest (worker_errors
+  //   "0 * * * *" , hourly credential health probe
+  //   "0 3 * * *" , daily 03:00 UTC operator digest (worker_errors
   //                  aggregation + D1 size check)
   "triggers": {
     "crons": [

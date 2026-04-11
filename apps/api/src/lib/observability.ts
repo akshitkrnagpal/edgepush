@@ -48,7 +48,7 @@ export type WorkerErrorKind =
 export interface LogWorkerErrorInput {
   kind: WorkerErrorKind;
   /**
-   * Arbitrary context. We JSON.stringify it and store it as text —
+   * Arbitrary context. We JSON.stringify it and store it as text -
    * no schema, grep-friendly for the operator digest later.
    */
   payload: Record<string, unknown>;
@@ -57,7 +57,7 @@ export interface LogWorkerErrorInput {
 /**
  * Write a row to worker_errors. Best-effort: logging failures are
  * themselves logged to console.error but NEVER rethrown. A dispatch
- * error that can't be recorded is still a dispatch error — we don't
+ * error that can't be recorded is still a dispatch error, we don't
  * want the logging path to eat the original signal.
  */
 export async function logWorkerError(

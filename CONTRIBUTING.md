@@ -8,12 +8,12 @@ without ping-pong on stuff that's easy to fix up front.
 edgepush is a pnpm workspace. Five packages:
 
 ```
-apps/api/      Cloudflare Worker — Hono routes, dispatch consumer,
+apps/api/      Cloudflare Worker. Hono routes, dispatch consumer,
                DO rate limiter, D1 schema, APNs and FCM clients,
                billing, probes, observability.
 apps/web/      Next.js 16 dashboard, deployed via @opennextjs/cloudflare.
-packages/sdk/  @edgepush/sdk — typed client for any fetch runtime.
-packages/cli/  @edgepush/cli — terminal client. Bundles the SDK inline.
+packages/sdk/  @edgepush/sdk, typed client for any fetch runtime.
+packages/cli/  @edgepush/cli, terminal client. Bundles the SDK inline.
 packages/shared/  Zod schemas + types shared between api, sdk, web.
 ```
 
@@ -63,7 +63,7 @@ The highest-leverage areas right now:
    terminal script. A button on `/dashboard/settings` → "Dead letters"
    that lists `worker_errors` with `kind='dlq'` and replays from the UI
    would save the operator a lot of `wrangler` time.
-4. **Self-host troubleshooting** — if you hit a problem that isn't
+4. **Self-host troubleshooting**, if you hit a problem that isn't
    already in `SELFHOST.md`'s Troubleshooting section, open an issue
    with the fix.
 5. **Webhook delivery retry queue.** Today webhook failures are logged
@@ -99,7 +99,7 @@ DESIGN.md and CLAUDE.md cover the visual ones.
 - Imperative mood: "Add X" not "Added X" or "Adds X".
 - First line under 70 characters.
 - Body wraps at ~72 characters.
-- Explain the *why*, not the *what* — the diff shows the what.
+- Explain the *why*, not the *what*, the diff shows the what.
 - One logical change per commit. If you can describe two things in
   the same commit message, it's two commits.
 
@@ -112,7 +112,7 @@ edgepush is dual-licensed:
 - `packages/sdk`, `packages/cli`, and `packages/shared` are MIT.
 
 Contributions to a package land under that package's license. There
-is no CLA — your commit is your acceptance of the license terms for
+is no CLA, your commit is your acceptance of the license terms for
 the package you're contributing to.
 
 If you're contributing to the server or dashboard and are uneasy

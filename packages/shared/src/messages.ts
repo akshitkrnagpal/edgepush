@@ -68,7 +68,7 @@ export const PushMessageSchema = z.object({
   /**
    * APNs push type override. Defaults to `alert` (or `background` when
    * `contentAvailable` is true). Set explicitly when sending VoIP, location,
-   * complication, fileprovider, or MDM payloads — these require matching
+   * complication, fileprovider, or MDM payloads, these require matching
    * topic suffixes and entitlements on your app side.
    */
   pushType: z

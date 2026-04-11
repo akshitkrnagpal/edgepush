@@ -10,11 +10,11 @@
  * │ HOSTED_MODE            │ Behavior                                │
  * ├────────────────────────┼─────────────────────────────────────────┤
  * │ "true"                 │ Plan/quota/retention enforced           │
- * │ anything else or unset │ No gates — self-host runs unlimited     │
+ * │ anything else or unset │ No gates, self-host runs unlimited     │
  * └────────────────────────┴─────────────────────────────────────────┘
  *
  * The single source of truth is env.HOSTED_MODE, read through isHosted().
- * Every caller that needs to gate behavior imports this helper — we never
+ * Every caller that needs to gate behavior imports this helper, we never
  * compare env.HOSTED_MODE === "true" directly in business logic. That way,
  * if the check ever needs to grow (multi-tenant hosted, staging mode, etc.)
  * we change one function instead of hunting string comparisons through the

@@ -8,7 +8,7 @@
  *   in the /office-hours doc: "$ edgepush --pricing" in JetBrains Mono 800
  *   at display-2xl size.
  * - Three tiers in 1px-rule boxes, Pro differentiated ONLY by accent
- *   border color — no drop shadow, no "popular" sticker, no border-left
+ *   border color, no drop shadow, no "popular" sticker, no border-left
  *   trick. DESIGN.md line 189-197 forbids all of those.
  * - Status dots use the `●` / `○` text characters (not SVG icons).
  * - CTAs read like shell prompts: `$ sign_in_with_github`,
@@ -23,12 +23,12 @@ import { useState } from "react";
 import { api } from "@/lib/api";
 
 export default function PricingPage() {
-  // Public marketing page — lives outside the dashboard route segment,
+  // Public marketing page, lives outside the dashboard route segment,
   // so there's no QueryClientProvider in scope. We can't use the React
   // Query hooks from lib/queries.ts here (they'd throw "No QueryClient
   // set" during Next's static prerender pass). Call the API client
   // directly with plain useState for the pending flag. Loses no
-  // functionality — this call is a one-shot, nothing to cache or
+  // functionality, this call is a one-shot, nothing to cache or
   // invalidate.
   const [checkoutError, setCheckoutError] = useState<string | null>(null);
   const [checkoutPending, setCheckoutPending] = useState(false);
@@ -48,7 +48,7 @@ export default function PricingPage() {
 
   return (
     <div className="min-h-screen">
-      {/* Top nav — minimal. Matches the rest of the marketing surfaces. */}
+      {/* Top nav, minimal. Matches the rest of the marketing surfaces. */}
       <nav className="border-b border-rule px-6 py-5">
         <div className="mx-auto flex max-w-[1440px] items-center justify-between">
           <Link
@@ -109,7 +109,7 @@ export default function PricingPage() {
             }}
           />
 
-          {/* Pro — featured via accent border ONLY */}
+          {/* Pro, featured via accent border ONLY */}
           <TierCard
             name="pro"
             price="$29"
@@ -212,9 +212,9 @@ export default function PricingPage() {
                 />
                 <ComparisonRow
                   feature="priority email support"
-                  free="—"
+                  free="-"
                   pro="24h best effort"
-                  selfHost="—"
+                  selfHost="-"
                 />
                 <ComparisonRow
                   feature="license"

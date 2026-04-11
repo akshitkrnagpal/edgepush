@@ -4,12 +4,12 @@
  * Stripe delivers events at-least-once, so everything here must be
  * idempotent. The sequence:
  *
- *   1. Read the raw body (needed for signature verification — do NOT
+ *   1. Read the raw body (needed for signature verification, do NOT
  *      parse it into JSON first, the signature is computed over the
  *      exact bytes Stripe sent).
  *   2. Verify the Stripe-Signature header against STRIPE_WEBHOOK_SECRET.
  *      Reject with 400 if invalid or timestamp > 5 min old.
- *   3. Check stripe_events for event.id — if we've seen it, return 200
+ *   3. Check stripe_events for event.id, if we've seen it, return 200
  *      (idempotent no-op).
  *   4. Dispatch on event.type. Five cases matter in v1:
  *        - checkout.session.completed
@@ -66,7 +66,7 @@ export const stripeWebhookRouter = new Hono<AppContext>();
 stripeWebhookRouter.post("/webhooks/stripe", async (c) => {
   if (!c.env.STRIPE_WEBHOOK_SECRET) {
     // Self-host or misconfigured hosted. Stripe shouldn't be calling
-    // us in the first place — return 503 so the operator notices.
+    // us in the first place, return 503 so the operator notices.
     return c.json(
       { error: "webhook_secret_not_configured" },
       503,
@@ -89,7 +89,7 @@ stripeWebhookRouter.post("/webhooks/stripe", async (c) => {
     return c.json({ error: "invalid_signature" }, 400);
   }
 
-  // Safe to parse now — we've authenticated the sender.
+  // Safe to parse now, we've authenticated the sender.
   let event: StripeEventObject;
   try {
     event = JSON.parse(body) as StripeEventObject;
@@ -151,11 +151,11 @@ stripeWebhookRouter.post("/webhooks/stripe", async (c) => {
         );
         break;
       default:
-        // Unknown event type — log and record so we don't re-process.
+        // Unknown event type, log and record so we don't re-process.
         console.log(`[stripe webhook] ignored event ${event.type} (${event.id})`);
     }
   } catch (err) {
-    // Log and record the event as processed anyway — we'd rather lose
+    // Log and record the event as processed anyway, we'd rather lose
     // the one bad event than be retried 72 times. Operator will see the
     // error in worker logs and fix it manually.
     console.error(
@@ -184,7 +184,7 @@ async function handleCheckoutCompleted(
   db: Db,
   session: StripeCheckoutSessionObject,
 ): Promise<void> {
-  // Verify the HMAC on client_reference_id — the ONLY source of truth
+  // Verify the HMAC on client_reference_id, the ONLY source of truth
   // for which user this Checkout belongs to. Never fall back to
   // customer_email lookup (see lib/stripe.ts for the reason).
   const userId = await verifyClientReferenceId(
@@ -212,14 +212,14 @@ async function handleCheckoutCompleted(
 
   if (!session.subscription) {
     // One-time payment or subscription still being set up. Nothing to
-    // do yet — the customer.subscription.created event will land next.
+    // do yet, the customer.subscription.created event will land next.
     return;
   }
 
   // Pull the full Subscription object so we can write every field.
   const sub = await fetchStripeSubscription(env, session.subscription);
   await upsertSubscriptionFromStripe(db, userId, sub);
-  // No auditLog write — auditLog.appId is a FK to apps.id, and a
+  // No auditLog write, auditLog.appId is a FK to apps.id, and a
   // subscription event is user-scoped. The stripe_events table is the
   // durable audit trail for billing.
 }
@@ -230,7 +230,7 @@ async function handleSubscriptionUpdated(
 ): Promise<void> {
   // Find the user by stripeSubscriptionId OR stripeCustomerId. If neither
   // matches, this event arrived before checkout.session.completed had a
-  // chance to write the customer ID — skip, we'll pick it up on the next
+  // chance to write the customer ID, skip, we'll pick it up on the next
   // update or on checkout.session.completed itself.
   const existing = await db
     .select({ userId: subscriptions.userId })
@@ -241,7 +241,7 @@ async function handleSubscriptionUpdated(
 
   if (!existing) {
     console.log(
-      `[stripe webhook] subscription.updated for unknown sub ${sub.id} — waiting for checkout.session.completed`,
+      `[stripe webhook] subscription.updated for unknown sub ${sub.id}, waiting for checkout.session.completed`,
     );
     return;
   }
@@ -306,12 +306,12 @@ async function handleInvoicePaymentFailed(
     .where(eq(subscriptions.userId, existing.userId));
 
   // Best-effort email notification. Don't let a Resend outage break the
-  // webhook — we've already updated the subscription state, the user
+  // webhook, we've already updated the subscription state, the user
   // will see "past_due" in the dashboard regardless.
   try {
     await sendEmail(env, {
       to: existing.userEmail,
-      subject: "[edgepush] payment failed — your plan will be downgraded soon",
+      subject: "[edgepush] payment failed, your plan will be downgraded soon",
       text: [
         `Your most recent edgepush payment didn't go through.`,
         ``,
@@ -323,7 +323,7 @@ async function handleInvoicePaymentFailed(
         `  1. Update your card in the edgepush dashboard`,
         `  2. Or email hello@edgepush.dev if you need help`,
         ``,
-        `edgepush — open source push notifications`,
+        `edgepush, open source push notifications`,
       ].join("\n"),
     });
   } catch (err) {
@@ -352,7 +352,7 @@ async function handleInvoicePaymentSucceeded(
 
   if (!existing) return;
 
-  // Only flip state if we were in past_due — don't demote a freshly-
+  // Only flip state if we were in past_due, don't demote a freshly-
   // canceled subscription back to active on a trailing retry.
   if (existing.status !== "past_due") return;
 

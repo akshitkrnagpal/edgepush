@@ -1,6 +1,6 @@
 #!/usr/bin/env bun
 /**
- * Operator script — inspect a single app's recent activity.
+ * Operator script, inspect a single app's recent activity.
  *
  * Purpose: when a paying customer emails saying "my pushes aren't
  * landing," run this script to pull their last 50 messages, their
@@ -12,7 +12,7 @@
  *   bun scripts/operator/inspect-app.ts <appId> [--remote]
  *
  * Runs locally with the operator's wrangler auth. Does not require a
- * session cookie and does not go through the API — reads straight
+ * session cookie and does not go through the API, reads straight
  * from D1 via `wrangler d1 execute`.
  */
 
@@ -159,7 +159,7 @@ if (messageRows.length === 0) {
 } else {
   for (const m of messageRows) {
     const when = new Date(m.created_at).toISOString();
-    const err = m.error ? ` — ${m.error.slice(0, 60)}` : "";
+    const err = m.error ? `, ${m.error.slice(0, 60)}` : "";
     console.log(
       `  ${when}  ${m.platform.padEnd(8)}  ${m.status.padEnd(10)}  ${m.id.slice(0, 8)}${err}`,
     );

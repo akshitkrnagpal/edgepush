@@ -23,7 +23,7 @@ import { probeApnsCredentials } from "./apns";
 // A valid ES256 P-256 private key in PKCS#8 PEM format. This is a
 // real-format key (generated deterministically) so `importPKCS8` in
 // jose accepts it. The corresponding public key is not trusted by
-// anyone — it's only used locally by the probe to sign a JWT that
+// anyone, it's only used locally by the probe to sign a JWT that
 // the mocked fetch will never validate.
 const TEST_P8_KEY = `-----BEGIN PRIVATE KEY-----
 MIGHAgEAMBMGByqGSM49AgEGCCqGSM49AwEHBG0wawIBAQQgevZzL1gdAFr88hb2
@@ -137,7 +137,7 @@ describe("probeApnsCredentials", () => {
   });
 
   it("returns broken on malformed .p8 key (jose throws)", async () => {
-    // No fetch mock needed — jose throws before we hit the network.
+    // No fetch mock needed, jose throws before we hit the network.
     const result = await probeApnsCredentials({
       ...baseInput,
       privateKey: "not a valid pem key",

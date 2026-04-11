@@ -49,7 +49,7 @@ export default function SettingsPage() {
     setDeleteStatus(null);
     try {
       await deleteAccount.mutateAsync(session.user.email);
-      // Best-effort sign-out on the Better Auth side too — the user
+      // Best-effort sign-out on the Better Auth side too, the user
       // row was already deleted from the edgepush DB, so this is just
       // session cookie cleanup.
       await authClient.signOut().catch(() => {});

@@ -2,7 +2,7 @@ import { ImageResponse } from "next/og";
 
 export const runtime = "edge";
 
-export const alt = "edgepush — Open source push notifications at the edge";
+export const alt = "edgepush. Open source push notifications at the edge";
 export const size = {
   width: 1200,
   height: 630,

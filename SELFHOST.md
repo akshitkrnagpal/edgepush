@@ -11,7 +11,7 @@ Cloudflare account. You will end up with:
 
 Everything runs on the Cloudflare free plan up to real production
 traffic. The Workers Paid plan ($5/mo) removes most of the limits
-that a solo developer will ever notice — it's the recommended tier.
+that a solo developer will ever notice, it's the recommended tier.
 
 If you just want to try edgepush without running infrastructure,
 [edgepush.dev](https://edgepush.dev) is the hosted version of exactly
@@ -27,7 +27,7 @@ this codebase.
 - `wrangler` CLI. It's a workspace dev dep, so you can run it via
   `pnpm --filter @edgepush/api exec wrangler ...`. If you'd rather
   have it globally, `npm i -g wrangler@4`.
-- A GitHub OAuth app — edgepush uses Better Auth's GitHub provider
+- A GitHub OAuth app, edgepush uses Better Auth's GitHub provider
   for sign-in. You'll create one during setup.
 
 Optional (enables extra features):
@@ -35,7 +35,7 @@ Optional (enables extra features):
 - A **Resend** account for transactional email (credential health
   alerts, payment-failed emails, operator digest).
 - A **Stripe** account if you want to enable the Pro tier billing
-  flow. Self-host works perfectly fine without Stripe — it just
+  flow. Self-host works perfectly fine without Stripe, it just
   means `HOSTED_MODE=false` and no quotas.
 
 ---
@@ -50,11 +50,11 @@ pnpm install
 
 The monorepo has five packages:
 
-- `apps/api` — the Cloudflare Worker that speaks HTTP, accepts sends,
+- `apps/api`, the Cloudflare Worker that speaks HTTP, accepts sends,
   runs the dispatch consumer, and hosts the scheduled crons.
-- `apps/web` — the Next.js dashboard, deployed as a Worker via
+- `apps/web`, the Next.js dashboard, deployed as a Worker via
   [`@opennextjs/cloudflare`](https://opennext.js.org/cloudflare).
-- `packages/sdk`, `packages/cli`, `packages/shared` — the MIT-licensed
+- `packages/sdk`, `packages/cli`, `packages/shared`, the MIT-licensed
   client libraries. These are published on npm separately and you
   don't need to deploy them.
 
@@ -71,7 +71,7 @@ terminal there if you like.
 pnpm --filter @edgepush/api exec wrangler d1 create edgepush
 ```
 
-Wrangler prints a `database_id`. **Copy the UUID** — you'll paste it
+Wrangler prints a `database_id`. **Copy the UUID**, you'll paste it
 into `wrangler.jsonc` in a minute.
 
 ### 2.2 KV namespace
@@ -89,7 +89,7 @@ pnpm --filter @edgepush/api exec wrangler queues create edgepush-dispatch
 pnpm --filter @edgepush/api exec wrangler queues create edgepush-dispatch-dlq
 ```
 
-No IDs to copy — queues are referenced by name.
+No IDs to copy, queues are referenced by name.
 
 ### 2.4 R2 bucket (optional, for long-term log archive + backups)
 
@@ -140,15 +140,15 @@ Change these fields:
     }
   ]
 
-  // queues, durable_objects, migrations, triggers — leave as-is
+  // queues, durable_objects, migrations, triggers, leave as-is
 }
 ```
 
 `HOSTED_MODE=false` is the important one. With that set:
 
-- `/v1/send` skips all plan limits — self-host is unlimited
-- The retention cron is a no-op — your messages never get purged
-- The pricing page's "Upgrade to Pro" button returns 501 — there's
+- `/v1/send` skips all plan limits, self-host is unlimited
+- The retention cron is a no-op, your messages never get purged
+- The pricing page's "Upgrade to Pro" button returns 501, there's
   nothing to upgrade to
 
 If you ever flip it to `"true"` you're opting into the full hosted-
@@ -184,13 +184,31 @@ pnpm --filter @edgepush/api exec wrangler secret put GITHUB_CLIENT_SECRET
 ### Optional (enable if you want the feature)
 
 ```bash
-# Resend API key — enables credential health email alerts.
+# Resend API key, enables credential health email alerts.
 # Without this, alerts log to console.warn only.
 pnpm --filter @edgepush/api exec wrangler secret put RESEND_API_KEY
 
 # The From: address on outbound email. Default: noreply@edgepush.dev
 pnpm --filter @edgepush/api exec wrangler secret put EMAIL_FROM
+
+# Operator deep-health probe token. Enables GET /health/deep, which
+# pings D1 + KV + reports killswitch state + queue binding presence
+# in a single JSON. Disabled (503) when this secret is unset.
+# Generate fresh: openssl rand -hex 32
+pnpm --filter @edgepush/api exec wrangler secret put OPERATOR_PROBE_TOKEN
 ```
+
+Once `OPERATOR_PROBE_TOKEN` is set, you can curl the deep health
+endpoint from your laptop:
+
+```bash
+curl -H "x-edgepush-operator-token: $TOKEN" \
+  https://api.your-domain.com/health/deep
+```
+
+Returns per-component status (`d1` / `kv` / `killswitch` / `queue`)
+with latency_ms and a roll-up. Useful when `/health` says ok but
+something downstream is degraded.
 
 Skip the `STRIPE_*` secrets entirely unless you're running a paid
 tier. The billing endpoints gracefully return 501 without them.
@@ -205,13 +223,13 @@ pnpm --filter @edgepush/api db:migrate:remote
 
 This runs every file under `apps/api/migrations/` against your
 production D1 in order. Expect ~3 migrations to apply and ~40-50
-commands to execute — includes the Better Auth tables, the edgepush
+commands to execute, includes the Better Auth tables, the edgepush
 schema, and the Phase 1 additions (subscriptions, usage counters,
 credential health columns, stripe_events, worker_errors).
 
 If this fails mid-way, the corresponding rollback SQL lives under
 `apps/api/drizzle-rollback/`. See
-[OPERATOR.md — migration rollback](./OPERATOR.md#migration-rollback)
+[OPERATOR.md, migration rollback](./OPERATOR.md#migration-rollback)
 for the procedure.
 
 ---
@@ -264,7 +282,7 @@ NEXT_PUBLIC_API_URL=https://api.your-domain.com
 > **build time** (via webpack/turbopack DefinePlugin string
 > substitution). They are NOT read from `process.env` at runtime in
 > the browser. That means setting `NEXT_PUBLIC_API_URL` in the
-> `apps/web/wrangler.jsonc` `vars` block does *nothing* — `vars` are
+> `apps/web/wrangler.jsonc` `vars` block does *nothing*, `vars` are
 > runtime worker env vars, and they never reach the client bundle.
 >
 > If you forget this step and ship a build with the wrong URL, the
@@ -295,7 +313,7 @@ domain, if configured via a separate `wrangler.jsonc` inside
 4. Click `$ create_app`, give it a name and a package/bundle ID
    (e.g., `io.example.myapp`).
 5. In the app detail page, click `$ new_key` and copy the issued API
-   key. Store it somewhere safe — you can't see it again.
+   key. Store it somewhere safe, you can't see it again.
 6. Upload an APNs `.p8` or FCM service account JSON under the
    `credentials` section.
 7. Send a test push via the SDK:
@@ -329,21 +347,21 @@ fork:
 
 1. Set these repo secrets in GitHub (Settings → Secrets and variables
    → Actions):
-   - `CLOUDFLARE_API_TOKEN` (required) — create at
+   - `CLOUDFLARE_API_TOKEN` (required), create at
      [dash.cloudflare.com/profile/api-tokens](https://dash.cloudflare.com/profile/api-tokens)
      with D1 read permissions.
-   - `BACKUP_ENCRYPTION_KEY` (strongly recommended) — 32 bytes hex,
+   - `BACKUP_ENCRYPTION_KEY` (strongly recommended), 32 bytes hex,
      `openssl rand -hex 32`. Without this, the dump stores plaintext
      in the GitHub Actions artifact. Fine as a fallback, not fine if
      your D1 holds real customer `.p8` keys.
    - `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`,
-     `R2_BUCKET` (optional) — enables upload to your R2 bucket from
+     `R2_BUCKET` (optional), enables upload to your R2 bucket from
      step 2.4 for long-term retention beyond 7 days.
 
 2. The workflow runs at 04:00 UTC daily and can be triggered manually
    from the Actions tab.
 
-See [OPERATOR.md — backup restore](./OPERATOR.md#backup-restore) for
+See [OPERATOR.md, backup restore](./OPERATOR.md#backup-restore) for
 how to restore from one of these backups.
 
 ---
@@ -352,7 +370,7 @@ how to restore from one of these backups.
 
 `edgepush.dev` is this exact codebase with `HOSTED_MODE=true` and a
 handful of extra secrets (Stripe, Resend). Self-host is strictly a
-subset of the functionality — you get everything that runs on your
+subset of the functionality, you get everything that runs on your
 own infrastructure and none of the things that are explicitly tied
 to the hosted-tier business model.
 
@@ -369,7 +387,7 @@ to the hosted-tier business model.
 | Billing / Stripe Checkout | n/a | ✓ |
 | Operator email support | n/a | ✓ (we run it) |
 
-The license is the same — AGPL-3.0 on the server, MIT on the SDK —
+The license is the same. AGPL-3.0 on the server, MIT on the SDK -
 so you can embed `@edgepush/sdk` in a closed-source mobile app's
 backend regardless of which tier you use.
 
@@ -400,18 +418,18 @@ pnpm --filter @edgepush/api exec wrangler kv key delete \
 The `0 * * * *` cron trigger isn't firing. Check that your
 `wrangler.jsonc` has the `triggers.crons` block and that you deployed
 after adding it. Cron triggers require a `wrangler deploy` to take
-effect — editing the config alone isn't enough.
+effect, editing the config alone isn't enough.
 
 **"Nothing happens when I sign in"**
 Check that the GitHub OAuth app callback URL is exactly:
-`https://<your-api-domain>/api/auth/callback/github` — including the
+`https://<your-api-domain>/api/auth/callback/github`, including the
 trailing path. Better Auth is picky about this.
 
 **Sign-in (or any dashboard fetch) hits `http://localhost:8787` and 404s**
 You deployed a build that didn't have `NEXT_PUBLIC_API_URL` set, so
 Next.js inlined the dev fallback from `apps/web/src/lib/auth-client.ts`
 into the client bundle. `NEXT_PUBLIC_*` env vars are baked at BUILD
-time, not read at runtime — putting the URL in `wrangler.jsonc` `vars`
+time, not read at runtime, putting the URL in `wrangler.jsonc` `vars`
 won't help. Edit `apps/web/.env.production` to point at your API
 worker and re-run `pnpm --filter @edgepush/web deploy`.
 
@@ -421,7 +439,7 @@ worker and re-run `pnpm --filter @edgepush/web deploy`.
 
 - Read [OPERATOR.md](./OPERATOR.md) if you want to understand the
   runbook for incident response, backup restore, and migration
-  rollback — even self-hosters benefit from knowing what to do when
+  rollback, even self-hosters benefit from knowing what to do when
   something goes sideways.
 - Open an issue on GitHub if any of the above is wrong or unclear.
   Self-host docs rot fast and the only way they stay honest is

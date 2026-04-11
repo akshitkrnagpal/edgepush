@@ -24,7 +24,7 @@ export default defineConfig({
   test: {
     environment: "node",
     include: ["src/**/*.test.ts"],
-    // One test file at a time — we mock `fetch` globally for the probe
+    // One test file at a time, we mock `fetch` globally for the probe
     // tests, and parallel workers would race on the mock. Vitest 4
     // moved pool options to the top level.
     pool: "forks",

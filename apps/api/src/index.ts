@@ -10,6 +10,7 @@ import { receiptsRouter } from "./routes/receipts";
 import { sendRouter } from "./routes/send";
 import { stripeWebhookRouter } from "./routes/webhooks/stripe";
 import type { AppContext, DispatchJob, Env } from "./types";
+import { SERVER_VERSION } from "./version";
 
 export { RateLimiter } from "./rate-limiter";
 
@@ -42,7 +43,7 @@ app.use("*", async (c, next) => {
 app.get("/", (c) =>
   c.json({
     name: "edgepush",
-    version: "0.0.0",
+    version: SERVER_VERSION,
     docs: "https://github.com/akshitkrnagpal/edgepush",
   }),
 );
@@ -55,7 +56,7 @@ app.get("/health", (c) => c.json({ status: "ok" }));
  *
  * Gated on an `x-edgepush-operator-token` header matching the
  * OPERATOR_PROBE_TOKEN secret. If the secret is unset, the endpoint is
- * disabled — fail closed so a fresh deployment doesn't accidentally leak
+ * disabled, fail closed so a fresh deployment doesn't accidentally leak
  * binding details. Set the secret with:
  *
  *   pnpm wrangler secret put OPERATOR_PROBE_TOKEN
@@ -127,7 +128,7 @@ app.get("/health/deep", async (c) => {
 
   // Killswitch read. Not technically a binding test (we just used KV
   // above), but the operator wants to know the killswitch state in the
-  // same JSON blob — saves a second wrangler invocation.
+  // same JSON blob, saves a second wrangler invocation.
   {
     const start = Date.now();
     try {
@@ -193,7 +194,7 @@ app.route("/api/dashboard", dashboardRouter);
 app.route("/v1", sendRouter);
 app.route("/v1", receiptsRouter);
 
-// Stripe webhook endpoint — public (signature-verified internally).
+// Stripe webhook endpoint, public (signature-verified internally).
 // Mounted under /v1 so it lives next to the other public routes.
 app.route("/v1", stripeWebhookRouter);
 

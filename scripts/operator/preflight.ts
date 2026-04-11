@@ -20,7 +20,7 @@
  * email are also required.
  *
  * This script reads from `wrangler secret list` output, which means
- * it can only verify that a secret EXISTS — not that its value is
+ * it can only verify that a secret EXISTS, not that its value is
  * correct. You still have to do the end-to-end smoke test from
  * OPERATOR.md.
  */
@@ -209,7 +209,7 @@ checks.push({
 checks.push({
   name: "wrangler.jsonc: DLQ consumer for observability",
   ok: hasDlq,
-  detail: hasDlq ? "wired" : "(missing — dead-letters won't land in worker_errors)",
+  detail: hasDlq ? "wired" : "(missing, dead-letters won't land in worker_errors)",
   required: true,
 });
 
@@ -234,7 +234,7 @@ try {
 
 for (const req of SECRETS) {
   // If we're NOT in hosted mode, skip hosted-only secrets entirely
-  // (don't even report them — they're irrelevant noise on self-host).
+  // (don't even report them, they're irrelevant noise on self-host).
   if (!hosted && req.hostedOnly) continue;
 
   const present = secretNames.has(req.name);
@@ -271,7 +271,7 @@ for (const c of checks) {
 console.log(``);
 if (failed === 0) {
   console.log(
-    `  ✓ ${checks.filter((c) => c.ok).length}/${checks.length} checks passing — ready to ship`,
+    `  ✓ ${checks.filter((c) => c.ok).length}/${checks.length} checks passing, ready to ship`,
   );
   console.log(``);
   console.log(`  next steps:`);
@@ -287,7 +287,7 @@ if (failed === 0) {
   process.exit(0);
 } else {
   console.log(
-    `  ✗ ${failed} required check${failed === 1 ? "" : "s"} failed — do not launch yet`,
+    `  ✗ ${failed} required check${failed === 1 ? "" : "s"} failed, do not launch yet`,
   );
   console.log(``);
   console.log(`  see ${hosted ? "OPERATOR.md" : "SELFHOST.md"} for the setup steps`);

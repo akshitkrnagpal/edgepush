@@ -8,7 +8,7 @@
  * │ plan       │ events/month        │ notes                        │
  * ├────────────┼─────────────────────┼─────────────────────────────┤
  * │ free       │ 10,000              │ edgepush.dev default tier   │
- * │ pro        │ 50,000              │ $29/mo — see COMMERCIAL.md  │
+ * │ pro        │ 50,000              │ $29/mo, see COMMERCIAL.md  │
  * │ enterprise │ unlimited (-1)      │ custom contract             │
  * │ selfhost   │ unlimited (-1)      │ self-host synthetic plan    │
  * └────────────┴─────────────────────┴─────────────────────────────┘
@@ -80,7 +80,7 @@ export async function getUserPlan(db: Db, userId: string): Promise<PlanName> {
   if (!row) return "free";
 
   // A canceled subscription drops the user back to free at renewal time.
-  // past_due users keep their plan until Stripe gives up retrying —
+  // past_due users keep their plan until Stripe gives up retrying -
   // we're not the dunning service.
   if (row.status === "canceled") return "free";
   return row.plan;
@@ -118,7 +118,7 @@ export async function reserveMonthlyUsage(
   userId: string,
   count: number,
 ): Promise<QuotaCheckResult> {
-  // Self-host bypass — no-op allow. The synthetic "selfhost" plan is
+  // Self-host bypass, no-op allow. The synthetic "selfhost" plan is
   // only meaningful in the dashboard UI; the actual check short-circuits
   // before touching the DB.
   if (!isHosted(env)) {
@@ -181,7 +181,7 @@ export async function reserveMonthlyUsage(
     .returning({ events: usageCounters.events });
 
   if (updated.length === 0) {
-    // Over limit — fetch the current count for the 429 payload so the
+    // Over limit, fetch the current count for the 429 payload so the
     // client knows how far over they are.
     const existing = await db
       .select({ events: usageCounters.events })
@@ -214,7 +214,7 @@ export async function reserveMonthlyUsage(
   };
 }
 
-/** Unconditional increment for unlimited plans — tracks usage for analytics. */
+/** Unconditional increment for unlimited plans, tracks usage for analytics. */
 async function incrementUsageUnbounded(
   db: Db,
   userId: string,

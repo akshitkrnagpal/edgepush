@@ -31,7 +31,7 @@ export function proxy(req: NextRequest) {
 }
 
 // Only run on the root path. Every other route on the self-host worker
-// (sign-in, dashboard, etc.) still works — visitors can navigate to
+// (sign-in, dashboard, etc.) still works, visitors can navigate to
 // them directly. We just don't want / to land on the SaaS landing.
 export const config = {
   matcher: ["/"],

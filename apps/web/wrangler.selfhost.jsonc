@@ -2,7 +2,7 @@
 //
 // This deploys the SAME apps/web build as a SECOND worker named
 // edgepush-selfhost-marketing on selfhost.edgepush.dev. The build output
-// is shared (.open-next/) — no separate build is needed; just point a
+// is shared (.open-next/), no separate build is needed; just point a
 // second wrangler at it. Both workers serve the same Next.js app, so
 // /selfhost is reachable on both domains.
 //
@@ -21,7 +21,7 @@
 // dashboard. Cloudflare will auto-create the DNS record for
 // selfhost.edgepush.dev when you first deploy.
 //
-// One worker, one bundle, one Next.js app, two routes — cheap and
+// One worker, one bundle, one Next.js app, two routes, cheap and
 // avoids divergence between the main dashboard and the self-host
 // landing build.
 
@@ -44,7 +44,7 @@
     "binding": "ASSETS"
   }
 
-  // No build hook here — we deliberately rely on the main wrangler.jsonc
+  // No build hook here, we deliberately rely on the main wrangler.jsonc
   // (or pnpm deploy) to produce .open-next/. This config just deploys
   // whatever's already built. That keeps the two workers in lockstep
   // without rebuilding twice.

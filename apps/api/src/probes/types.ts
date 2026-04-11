@@ -10,11 +10,11 @@
  * ┌────────────────┬──────────────────────────────────────────────────┐
  * │ state          │ meaning                                          │
  * ├────────────────┼──────────────────────────────────────────────────┤
- * │ ok             │ Authenticated operation succeeded — creds work.  │
- * │ broken         │ Creds are definitively bad — user must act.      │
+ * │ ok             │ Authenticated operation succeeded, creds work.  │
+ * │ broken         │ Creds are definitively bad, user must act.      │
  * │ topic_mismatch │ APNs only: JWT is valid but bundleId doesn't     │
  * │                │ match what Apple expects. Config problem, not a  │
- * │                │ credential problem — surface in dashboard but do │
+ * │                │ credential problem, surface in dashboard but do │
  * │                │ not fire an email alert.                         │
  * │ transient      │ Unknown failure (5xx, network, rate limit). Do   │
  * │                │ not flip the stored state; retry on next cron.   │

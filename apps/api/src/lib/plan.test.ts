@@ -67,7 +67,7 @@ describe("currentYearMonth", () => {
   });
 
   it("pads single-digit months with a leading zero", () => {
-    // 2026-01-15 — January should be "01", not "1"
+    // 2026-01-15. January should be "01", not "1"
     const ts = Date.UTC(2026, 0, 15, 0, 0, 0);
     expect(currentYearMonth(ts)).toBe("2026-01");
   });
@@ -77,7 +77,7 @@ describe("currentYearMonth", () => {
     const march = Date.UTC(2026, 2, 31, 23, 59, 59);
     expect(currentYearMonth(march)).toBe("2026-03");
 
-    // April 1 00:00:00 UTC — one second later
+    // April 1 00:00:00 UTC, one second later
     const april = Date.UTC(2026, 3, 1, 0, 0, 0);
     expect(currentYearMonth(april)).toBe("2026-04");
   });
@@ -87,7 +87,7 @@ describe("currentYearMonth", () => {
     const dec = Date.UTC(2026, 11, 31, 23, 59, 59);
     expect(currentYearMonth(dec)).toBe("2026-12");
 
-    // January 1 00:00:00 UTC — new year
+    // January 1 00:00:00 UTC, new year
     const jan = Date.UTC(2027, 0, 1, 0, 0, 0);
     expect(currentYearMonth(jan)).toBe("2027-01");
   });
@@ -102,14 +102,14 @@ describe("currentYearMonth", () => {
 
   it("handles February correctly (non-leap and leap years)", () => {
     expect(currentYearMonth(Date.UTC(2025, 1, 28, 0, 0, 0))).toBe("2025-02");
-    // 2024 is a leap year — Feb 29 exists
+    // 2024 is a leap year. Feb 29 exists
     expect(currentYearMonth(Date.UTC(2024, 1, 29, 0, 0, 0))).toBe("2024-02");
-    // 2025 is not — March 1 is the next day
+    // 2025 is not. March 1 is the next day
     expect(currentYearMonth(Date.UTC(2025, 2, 1, 0, 0, 0))).toBe("2025-03");
   });
 
   it("defaults to Date.now() when called without arguments", () => {
-    // Just verify it returns a well-formed string — we can't pin
+    // Just verify it returns a well-formed string, we can't pin
     // the value without stubbing the clock.
     const result = currentYearMonth();
     expect(result).toMatch(/^\d{4}-\d{2}$/);

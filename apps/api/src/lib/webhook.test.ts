@@ -124,7 +124,7 @@ describe("dispatchWebhook", () => {
     const header = req.headers["x-edgepush-signature"]!;
     const sig = header.replace("sha256=", "");
 
-    // Verify against a DIFFERENT body — signature should not match.
+    // Verify against a DIFFERENT body, signature should not match.
     const tampered = JSON.stringify({ ...basePayload, status: "failed" });
     const expectedForTampered = await expectedSignature(tampered, SECRET);
     expect(expectedForTampered).not.toBe(sig);

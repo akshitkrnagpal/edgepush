@@ -9,15 +9,15 @@
  * ┌────────────────────────────────────┬───────────────────────────────┐
  * │ APNs response                      │ probe result                  │
  * ├────────────────────────────────────┼───────────────────────────────┤
- * │ 400 BadDeviceToken                 │ ok — JWT + topic are valid    │
+ * │ 400 BadDeviceToken                 │ ok. JWT + topic are valid    │
  * │ 410 Unregistered                   │ ok                            │
- * │ 403 InvalidProviderToken           │ broken — key revoked          │
- * │ 403 ExpiredProviderToken           │ broken — key expired          │
- * │ 403 Forbidden                      │ broken — team ID wrong        │
+ * │ 403 InvalidProviderToken           │ broken, key revoked          │
+ * │ 403 ExpiredProviderToken           │ broken, key expired          │
+ * │ 403 Forbidden                      │ broken, team ID wrong        │
  * │ 400 BadTopic / MissingTopic        │ topic_mismatch                │
- * │ 429                                │ transient — back off          │
+ * │ 429                                │ transient, back off          │
  * │ 5xx / network error                │ transient                     │
- * │ anything else                      │ transient — safer not to     │
+ * │ anything else                      │ transient, safer not to     │
  * │                                    │ flip state on unknown codes   │
  * └────────────────────────────────────┴───────────────────────────────┘
  *
@@ -25,7 +25,7 @@
  * Apple returns BadDeviceToken for it without touching the key validity
  * check, which is the signal we want.
  *
- * The probe does NOT cache JWTs — the cron runs at most once per hour and
+ * The probe does NOT cache JWTs, the cron runs at most once per hour and
  * the cache would invalidate between invocations anyway. Each probe signs
  * a fresh JWT.
  */
@@ -43,7 +43,7 @@ export interface ApnsProbeInput {
   teamId: string;
   /** Decrypted .p8 private key (PEM string). */
   privateKey: string;
-  /** Bundle ID — read from apps.packageName at load time. */
+  /** Bundle ID, read from apps.packageName at load time. */
   bundleId: string;
   /** Whether to probe the production or sandbox endpoint. */
   production: boolean;
@@ -61,11 +61,11 @@ export async function probeApnsCredentials(
       .setIssuedAt()
       .sign(privateKey);
   } catch (err) {
-    // A malformed .p8 key means the stored credential is unusable —
+    // A malformed .p8 key means the stored credential is unusable -
     // flag as broken with a clear message so the user knows to re-upload.
     return {
       state: "broken",
-      error: `could not sign JWT — stored .p8 key is malformed (${
+      error: `could not sign JWT, stored .p8 key is malformed (${
         err instanceof Error ? err.message : "unknown error"
       })`,
     };
@@ -143,7 +143,7 @@ export async function probeApnsCredentials(
   if (reason === "BadTopic" || reason === "MissingTopic") {
     return {
       state: "topic_mismatch",
-      error: `APNs rejected the topic "${input.bundleId}" (${reason}) — the app's package_name probably doesn't match the real iOS bundle ID`,
+      error: `APNs rejected the topic "${input.bundleId}" (${reason}), the app's package_name probably doesn't match the real iOS bundle ID`,
     };
   }
 
@@ -151,7 +151,7 @@ export async function probeApnsCredentials(
   if (res.status === 429) {
     return {
       state: "transient",
-      error: "APNs rate limit (429) — will retry next cycle",
+      error: "APNs rate limit (429), will retry next cycle",
     };
   }
 
@@ -159,11 +159,11 @@ export async function probeApnsCredentials(
   if (res.status >= 500) {
     return {
       state: "transient",
-      error: `APNs server error (${res.status}) — will retry next cycle`,
+      error: `APNs server error (${res.status}), will retry next cycle`,
     };
   }
 
-  // Unknown 4xx — treat as transient rather than flipping to broken on
+  // Unknown 4xx, treat as transient rather than flipping to broken on
   // a code we don't recognize. Log it for operator review.
   return {
     state: "transient",

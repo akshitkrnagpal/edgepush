@@ -25,7 +25,7 @@ export default function PrivacyPolicyPage() {
           edgepush is an open source push notification service. This policy
           explains what data we collect when you use the hosted version, how it
           is stored, and your rights regarding that data. If you self-host
-          edgepush, this policy does not apply — your data stays in your own
+          edgepush, this policy does not apply, your data stays in your own
           Cloudflare account.
         </Section>
 

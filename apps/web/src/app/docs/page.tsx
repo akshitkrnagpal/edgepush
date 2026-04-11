@@ -96,7 +96,7 @@ export default function DocsPage() {
               </Link>
               , create an app with your package name (for example{" "}
               <span className="font-mono text-text">io.acme.myapp</span>), and
-              generate an API key. Copy the key immediately — it&apos;s shown
+              generate an API key. Copy the key immediately, it&apos;s shown
               only once.
             </p>
           </Section>
@@ -282,7 +282,7 @@ suspend fun fetchInitialFcmToken(): String? {
           <Section id="react-native" n="06" title="react native: bare or expo">
             <p className="mb-4">
               React Native gives you three paths. Pick the one matching your
-              project shape — and if you&apos;re an Expo user, read the
+              project shape, and if you&apos;re an Expo user, read the
               callout below carefully because there&apos;s exactly one trap
               you need to avoid.
             </p>
@@ -322,7 +322,7 @@ export async function setupPush() {
                 getDevicePushTokenAsync
               </span>{" "}
               to get the native APNs or FCM token. This is the migration
-              point from Expo&apos;s Push Service to edgepush — see the
+              point from Expo&apos;s Push Service to edgepush, see the
               callout below.
             </p>
             <Code>{`import * as Notifications from "expo-notifications";
@@ -373,7 +373,7 @@ export async function setupPush() {
                   getDevicePushTokenAsync()
                 </span>{" "}
                 instead. That&apos;s the entire client-side migration step
-                from Expo Push to edgepush — change one function name. The
+                from Expo Push to edgepush, change one function name. The
                 server side is already handled because{" "}
                 <span className="font-mono text-text">
                   getDevicePushTokenAsync
@@ -401,7 +401,7 @@ console.log(ticket.id); // save this to poll the receipt later`}</Code>
             <p className="mt-4">
               Every field maps directly to the underlying APNs or FCM
               payload. There&apos;s no proprietary token format and no
-              abstracted-away headers — see <a href="#rich">rich notifications</a>{" "}
+              abstracted-away headers, see <a href="#rich">rich notifications</a>{" "}
               for the full surface.
             </p>
           </Section>
@@ -410,7 +410,7 @@ console.log(ticket.id); // save this to poll the receipt later`}</Code>
             <p className="mb-4">
               edgepush forwards the full APNs and FCM header surface so you
               can ship features Expo Push Service can&apos;t. The fields below
-              are all optional and additive — the basic{" "}
+              are all optional and additive, the basic{" "}
               <span className="font-mono text-text">{"{ to, title, body }"}</span>{" "}
               still works.
             </p>
@@ -616,7 +616,7 @@ cd ../web && pnpm deploy`}</Code>
               >
                 SELFHOST.md
               </a>{" "}
-              — prerequisites, secrets, migrations, troubleshooting, and the
+              covers prerequisites, secrets, migrations, troubleshooting, and the
               nightly D1 backup workflow. If you plan to run a paid tier
               with Stripe billing, also read{" "}
               <a
