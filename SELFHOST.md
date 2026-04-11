@@ -242,14 +242,39 @@ The Next.js dashboard deploys through
 [`@opennextjs/cloudflare`](https://opennext.js.org/cloudflare), which
 compiles Next into a Worker.
 
-First, create `apps/web/.env.production` (or set env vars through
-your hosting config) pointing at your API:
+### 7.1 Edit `apps/web/.env.production`
+
+The repo ships with `apps/web/.env.production` already populated for
+the hosted instance:
+
+```
+NEXT_PUBLIC_API_URL=https://api.edgepush.dev
+```
+
+**Edit it to match your API URL before you run the build.** For
+example:
 
 ```
 NEXT_PUBLIC_API_URL=https://api.your-domain.com
 ```
 
-Then:
+> **Why this matters and where the `.env.production` value goes**
+>
+> Next.js inlines `NEXT_PUBLIC_*` values into the client bundle at
+> **build time** (via webpack/turbopack DefinePlugin string
+> substitution). They are NOT read from `process.env` at runtime in
+> the browser. That means setting `NEXT_PUBLIC_API_URL` in the
+> `apps/web/wrangler.jsonc` `vars` block does *nothing* — `vars` are
+> runtime worker env vars, and they never reach the client bundle.
+>
+> If you forget this step and ship a build with the wrong URL, the
+> symptom is: every dashboard fetch (sign-in, list apps, send a test
+> push) hits whatever URL was baked in, usually
+> `http://localhost:8787` from the dev fallback in
+> `apps/web/src/lib/auth-client.ts`. The fix is to edit
+> `apps/web/.env.production`, rebuild, and redeploy.
+
+### 7.2 Deploy
 
 ```bash
 pnpm --filter @edgepush/web deploy
@@ -381,6 +406,14 @@ effect — editing the config alone isn't enough.
 Check that the GitHub OAuth app callback URL is exactly:
 `https://<your-api-domain>/api/auth/callback/github` — including the
 trailing path. Better Auth is picky about this.
+
+**Sign-in (or any dashboard fetch) hits `http://localhost:8787` and 404s**
+You deployed a build that didn't have `NEXT_PUBLIC_API_URL` set, so
+Next.js inlined the dev fallback from `apps/web/src/lib/auth-client.ts`
+into the client bundle. `NEXT_PUBLIC_*` env vars are baked at BUILD
+time, not read at runtime — putting the URL in `wrangler.jsonc` `vars`
+won't help. Edit `apps/web/.env.production` to point at your API
+worker and re-run `pnpm --filter @edgepush/web deploy`.
 
 ---
 
