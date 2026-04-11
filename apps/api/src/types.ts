@@ -43,6 +43,16 @@ export interface Env {
   STRIPE_REF_HMAC_KEY?: string;
   /** Stripe Price ID for the Pro tier ($29/mo). */
   STRIPE_PRO_PRICE_ID?: string;
+
+  /**
+   * Operator-only token gating the deep health endpoint
+   * (`GET /health/deep`). When unset, the endpoint is disabled (503).
+   * When set, requests must include a matching
+   * `x-edgepush-operator-token` header.
+   *
+   * Set with: `pnpm wrangler secret put OPERATOR_PROBE_TOKEN`.
+   */
+  OPERATOR_PROBE_TOKEN?: string;
 }
 
 export interface AppContext {

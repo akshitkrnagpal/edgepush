@@ -76,7 +76,7 @@ export default function Home() {
         <div>
           <div className="mb-7 inline-flex items-center gap-2 border border-rule-strong px-3 py-1.5 font-mono text-[11px] uppercase tracking-[0.12em] text-muted-strong">
             <span className="ep-pulse h-1.5 w-1.5 rounded-full bg-accent" />
-            open source alpha / free forever
+            free tier · no credit card
           </div>
           <h1 className="mb-6 font-mono text-[56px] leading-[0.92] font-extrabold tracking-[-0.04em] text-text sm:text-[88px] lg:text-[108px]">
             push
@@ -85,11 +85,9 @@ export default function Home() {
             <span className="text-muted">.</span>
           </h1>
           <p className="mb-8 max-w-[520px] font-sans text-[17px] leading-[1.55] text-muted-strong sm:text-[18px]">
-            Open source push notifications for iOS and Android. Send through a
-            single API running on{" "}
-            <span className="font-mono text-text">Cloudflare Workers</span>,
-            with your own APNs and FCM credentials encrypted at rest. Use the
-            hosted instance free, or self-host on your own Cloudflare account.
+            Hosted push notifications for iOS and Android. Bring your APNs
+            and FCM credentials, get one HTTP endpoint, ship in five minutes.
+            Free tier covers 10K events/month. Pro is $29 when you outgrow it.
           </p>
           <div className="mb-10 flex flex-wrap gap-3">
             <Link
@@ -99,25 +97,14 @@ export default function Home() {
               <GithubMark />
               sign_in_with_github
             </Link>
-            <a
-              href="https://github.com/akshitkrnagpal/edgepush"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-2 rounded-none border border-rule-strong px-5 py-3 font-mono text-[12px] font-semibold text-text hover:border-text"
-            >
-              view_on_github <span className="text-muted">─&gt;</span>
-            </a>
             <Link
               href="/docs"
-              className="inline-flex items-center gap-2 rounded-none border border-rule-strong px-5 py-3 font-mono text-[12px] font-semibold text-muted-strong hover:border-text hover:text-text"
+              className="inline-flex items-center gap-2 rounded-none border border-rule-strong px-5 py-3 font-mono text-[12px] font-semibold text-text hover:border-text"
             >
-              read_the_docs
+              read_the_docs <span className="text-muted">─&gt;</span>
             </Link>
           </div>
           <div className="flex flex-wrap gap-5 font-mono text-[11px] text-muted">
-            <span>
-              <span className="text-accent">●</span> agpl + mit
-            </span>
             <span>
               <span className="text-accent">●</span> byo credentials
             </span>
@@ -126,6 +113,12 @@ export default function Home() {
             </span>
             <span>
               <span className="text-accent">●</span> rich notifications
+            </span>
+            <span>
+              <span className="text-accent">●</span> open source ·{" "}
+              <Link href="/selfhost" className="hover:text-text">
+                self-host
+              </Link>
             </span>
           </div>
         </div>
@@ -703,9 +696,8 @@ export default function Home() {
             tagline="your cloudflare account"
             body="Same code, your infra, your data. Cloudflare's free tier covers most apps. You own the credentials, the rate limits, the deploy cadence. No edgepush.dev in the middle."
             cta={{
-              href: "https://github.com/akshitkrnagpal/edgepush/blob/main/SELFHOST.md",
-              label: "$ deploy_your_own",
-              external: true,
+              href: "/selfhost",
+              label: "$ self_host_guide",
             }}
             features={[
               "unlimited apps + events",
@@ -809,13 +801,9 @@ export default function Home() {
         </div>
         <FooterColumn title="product">
           <FooterLink href="/docs">docs</FooterLink>
+          <FooterLink href="/pricing">pricing</FooterLink>
           <FooterLink href="/sign-in">dashboard</FooterLink>
-          <FooterLink
-            href="https://github.com/akshitkrnagpal/edgepush#self-host-on-cloudflare"
-            external
-          >
-            self-host
-          </FooterLink>
+          <FooterLink href="/selfhost">self-host</FooterLink>
         </FooterColumn>
         <FooterColumn title="packages">
           <FooterLink

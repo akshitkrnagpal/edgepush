@@ -1,0 +1,51 @@
+// Wrangler config for the self-host marketing worker.
+//
+// This deploys the SAME apps/web build as a SECOND worker named
+// edgepush-selfhost-marketing on selfhost.edgepush.dev. The build output
+// is shared (.open-next/) — no separate build is needed; just point a
+// second wrangler at it. Both workers serve the same Next.js app, so
+// /selfhost is reachable on both domains.
+//
+// To deploy:
+//
+//   cd apps/web
+//   pnpm exec opennextjs-cloudflare build
+//   pnpm exec wrangler deploy --config wrangler.selfhost.jsonc
+//
+// The middleware.ts at apps/web/src/middleware.ts rewrites the root
+// path to /selfhost when the request hostname matches selfhost.*, so
+// visitors to selfhost.edgepush.dev land on the self-host landing
+// without seeing /selfhost in the URL.
+//
+// DNS: this worker uses the same custom_domain feature as the main
+// dashboard. Cloudflare will auto-create the DNS record for
+// selfhost.edgepush.dev when you first deploy.
+//
+// One worker, one bundle, one Next.js app, two routes — cheap and
+// avoids divergence between the main dashboard and the self-host
+// landing build.
+
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "main": ".open-next/worker.js",
+  "name": "edgepush-selfhost-marketing",
+  "compatibility_date": "2026-04-10",
+  "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
+  "workers_dev": true,
+
+  // Custom domain for the self-host landing. Cloudflare auto-creates the
+  // DNS record when this worker is first deployed.
+  "routes": [
+    { "pattern": "selfhost.edgepush.dev", "custom_domain": true }
+  ],
+
+  "assets": {
+    "directory": ".open-next/assets",
+    "binding": "ASSETS"
+  }
+
+  // No build hook here — we deliberately rely on the main wrangler.jsonc
+  // (or pnpm deploy) to produce .open-next/. This config just deploys
+  // whatever's already built. That keeps the two workers in lockstep
+  // without rebuilding twice.
+}
