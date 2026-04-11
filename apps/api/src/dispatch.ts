@@ -155,7 +155,17 @@ async function processAppBatch(
       });
     }
 
-    // Fire webhook if configured and enabled
+    // Fire webhook if configured and enabled.
+    //
+    // Failure handling: webhook failures don't block the push from being
+    // acked (the delivery to APNs/FCM already happened, the webhook is a
+    // separate observability channel). But they DO get logged to
+    // worker_errors so the operator digest surfaces them.
+    //
+    // Followup: real retry semantics belong in a dedicated webhook queue
+    // (separate from the push dispatch queue) so transient customer
+    // outages don't get dropped on the first failure. For now, single
+    // attempt + observability is the minimal correct behavior.
     if (webhook?.enabled) {
       const payload: WebhookPayload = {
         event: nextStatus === "delivered" ? "message.delivered" : "message.failed",
@@ -167,9 +177,37 @@ async function processAppBatch(
         timestamp: Date.now(),
       };
       try {
-        await dispatchWebhook(webhook.url, webhook.secret, payload);
+        const webhookResult = await dispatchWebhook(
+          webhook.url,
+          webhook.secret,
+          payload,
+        );
+        if (!webhookResult.ok) {
+          await logWorkerError(db, {
+            kind: "webhook",
+            payload: {
+              messageId: row.id,
+              appId,
+              event: payload.event,
+              url: webhook.url,
+              status: webhookResult.status,
+              reason: "non_2xx",
+            },
+          });
+        }
       } catch (err) {
-        console.error(`[dispatch] webhook failed for ${row.id}:`, err);
+        console.error(`[dispatch] webhook threw for ${row.id}:`, err);
+        await logWorkerError(db, {
+          kind: "webhook",
+          payload: {
+            messageId: row.id,
+            appId,
+            event: payload.event,
+            url: webhook.url,
+            reason: "threw",
+            error: err instanceof Error ? err.message : String(err),
+          },
+        });
       }
     }
 

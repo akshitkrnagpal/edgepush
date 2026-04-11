@@ -9,11 +9,10 @@
  * │ cron expression   │ handler                                         │
  * ├───────────────────┼─────────────────────────────────────────────────┤
  * │ 0 * * * *         │ runProbeCycle — credential health probes        │
- * │ (future)          │ runRetentionPurge, runErrorDigest, runBackup    │
+ * │ 0 3 * * *         │ runOperatorDigest — daily worker_errors digest  │
+ * │                   │   + D1 size check                                │
+ * │ (future)          │ runRetentionPurge, runR2Archive                  │
  * └───────────────────┴─────────────────────────────────────────────────┘
- *
- * v1 ships only the credential health probe cron. Other crons land in
- * their own phases.
  *
  * Concurrency model: each scheduled() invocation calls exactly one
  * handler. Inside a handler, work is done sequentially or with a small

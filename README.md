@@ -59,17 +59,20 @@ import { Edgepush } from "@edgepush/sdk";
 const client = new Edgepush({ apiKey: "com.acme.app|sk_..." });
 
 const ticket = await client.send({
-  to: deviceToken,
-  title: "Build passed",
-  body: "Deploy to prod is live.",
-  data: { url: "/deploys/abc123" },
+  to: deviceToken,                      // native APNs or FCM token
+  title: "New order #4271",
+  body: "2x flat white, table 3",
+  image: "https://cdn.acme.app/o/4271.jpg",
+  mutableContent: true,                 // iOS NSE downloads `image`
+  collapseId: "order-4271",             // replaces prior pushes for #4271
+  expirationAt: Math.floor(Date.now() / 1000) + 600,
 });
 
 const receipt = await client.getReceipt(ticket.id);
 console.log(receipt.status); // "delivered" | "failed" | "queued"
 ```
 
-The SDK works in any environment with `fetch`: Node 18+, Bun, Deno, Cloudflare Workers, Vercel, browsers.
+The SDK works in any environment with `fetch`: Node 18+, Bun, Deno, Cloudflare Workers, Vercel, browsers. Every field above maps directly to the corresponding APNs or FCM payload — no proprietary token format, no abstracted-away headers.
 
 ## Self-host on Cloudflare
 
