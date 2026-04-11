@@ -23,7 +23,7 @@ export default function SettingsPage() {
         setProfileStatus(`Error: ${result.error.message ?? "failed"}`);
         return;
       }
-      setProfileStatus("Saved");
+      setProfileStatus("saved");
     } catch (err) {
       setProfileStatus(
         `Error: ${err instanceof Error ? err.message : "failed"}`,
@@ -56,74 +56,115 @@ export default function SettingsPage() {
 
   if (!session) return null;
 
+  const isProfileError = profileStatus?.startsWith("Error");
+
   return (
-    <div className="max-w-2xl mx-auto px-6 py-12">
-      <h1 className="text-3xl font-semibold mb-2">Account settings</h1>
-      <p className="text-sm text-zinc-500 mb-12">
-        Signed in as {session.user.email}
+    <div className="mx-auto max-w-[780px] px-6 py-12">
+      <div className="mb-2 font-mono text-[11px] uppercase tracking-[0.12em] text-muted">
+        <span className="text-accent">─&nbsp;</span> workspace / settings
+      </div>
+      <h1 className="mb-2 font-mono text-[36px] font-extrabold leading-[1.02] tracking-[-0.025em] text-text">
+        settings.
+      </h1>
+      <p className="mb-12 font-mono text-[12px] text-muted">
+        <span className="text-accent">●</span> signed in as {session.user.email}
       </p>
 
-      <section className="mb-12">
-        <h2 className="text-xl font-semibold mb-4">Profile</h2>
-        <form onSubmit={handleUpdateProfile} className="space-y-4">
+      <section className="mb-12 border border-rule-strong bg-surface">
+        <PanelHead title="profile" />
+        <form onSubmit={handleUpdateProfile} className="space-y-5 px-6 py-6">
+          <Field label="name" value={name} onChange={setName} />
           <div>
-            <label className="block text-xs font-medium text-zinc-400 mb-2">
-              Name
-            </label>
-            <input
-              type="text"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              className="w-full rounded-lg border border-white/10 bg-white/5 px-4 py-2 text-sm focus:outline-none focus:border-white/30"
-            />
-          </div>
-          <div>
-            <label className="block text-xs font-medium text-zinc-400 mb-2">
-              Email
+            <label className="mb-2 block font-mono text-[10px] uppercase tracking-[0.12em] text-muted">
+              email
             </label>
             <input
               type="email"
               value={session.user.email}
               disabled
-              className="w-full rounded-lg border border-white/10 bg-white/[0.02] px-4 py-2 text-sm text-zinc-500 cursor-not-allowed"
+              className="w-full cursor-not-allowed rounded-none border border-rule-strong bg-transparent px-4 py-2.5 font-sans text-[14px] text-muted"
             />
           </div>
           {profileStatus && (
             <p
-              className={
-                profileStatus.startsWith("Error")
-                  ? "text-sm text-red-400"
-                  : "text-sm text-emerald-300"
-              }
+              className={`font-mono text-[12px] ${
+                isProfileError ? "text-error" : "text-success"
+              }`}
             >
-              {profileStatus}
+              <span>●</span>{" "}
+              {isProfileError ? profileStatus : "● profile saved"}
             </p>
           )}
           <button
             type="submit"
-            className="rounded-lg bg-white text-black px-4 py-2 text-sm font-medium hover:bg-zinc-200"
+            className="inline-flex items-center gap-2 rounded-none bg-text px-4 py-2.5 font-mono text-[12px] font-semibold text-black hover:bg-accent"
           >
-            Save profile
+            <span className="text-accent">$</span> save_profile
           </button>
         </form>
       </section>
 
-      <section className="border-t border-red-400/20 pt-8">
-        <h2 className="text-xl font-semibold mb-2 text-red-300">Danger zone</h2>
-        <p className="text-sm text-zinc-500 mb-4">
-          Permanently delete your account and all associated apps,
-          credentials, and messages. This cannot be undone.
-        </p>
-        {deleteStatus && (
-          <p className="text-sm text-red-400 mb-3">{deleteStatus}</p>
-        )}
-        <button
-          onClick={handleDeleteAccount}
-          className="rounded-lg border border-red-400/40 text-red-300 px-4 py-2 text-sm font-medium hover:bg-red-400/10"
-        >
-          Delete account
-        </button>
+      <section className="border border-error bg-surface">
+        <div className="flex items-center justify-between border-b border-rule px-5 py-3 font-mono text-[11px] uppercase tracking-[0.12em] text-muted">
+          <span>
+            <span className="text-error">├&nbsp;</span>
+            <span className="text-error">danger_zone</span>
+          </span>
+          <span className="text-error">● irreversible</span>
+        </div>
+        <div className="space-y-4 px-6 py-6">
+          <p className="font-sans text-[14px] leading-[1.55] text-muted-strong">
+            Permanently delete your account and all associated apps,
+            credentials, and messages. This cannot be undone.
+          </p>
+          {deleteStatus && (
+            <p className="font-mono text-[12px] text-error">
+              <span>●</span> {deleteStatus}
+            </p>
+          )}
+          <button
+            onClick={handleDeleteAccount}
+            className="inline-flex items-center gap-2 rounded-none border border-error px-4 py-2.5 font-mono text-[12px] font-semibold text-error hover:bg-error/10"
+          >
+            <span>●</span> delete_account
+          </button>
+        </div>
       </section>
+    </div>
+  );
+}
+
+function PanelHead({ title }: { title: string }) {
+  return (
+    <div className="flex items-center justify-between border-b border-rule px-5 py-3 font-mono text-[11px] uppercase tracking-[0.12em] text-muted">
+      <span>
+        <span className="text-accent">├&nbsp;</span>
+        <span className="text-text">{title}</span>
+      </span>
+    </div>
+  );
+}
+
+function Field({
+  label,
+  value,
+  onChange,
+}: {
+  label: string;
+  value: string;
+  onChange: (v: string) => void;
+}) {
+  return (
+    <div>
+      <label className="mb-2 block font-mono text-[10px] uppercase tracking-[0.12em] text-muted">
+        {label}
+      </label>
+      <input
+        type="text"
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        className="w-full rounded-none border border-rule-strong bg-transparent px-4 py-2.5 font-sans text-[14px] text-text placeholder:text-muted focus:border-accent focus:outline-none"
+      />
     </div>
   );
 }

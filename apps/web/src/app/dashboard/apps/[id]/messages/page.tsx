@@ -10,56 +10,80 @@ export default function MessagesPage(props: {
 }) {
   const { id } = use(props.params);
   const messages = useMessages(id);
+  const msgList = messages.data;
 
   return (
-    <div className="max-w-5xl mx-auto px-6 py-12">
-      <Link
-        href={`/dashboard/apps/${id}`}
-        className="text-sm text-zinc-500 hover:text-zinc-200 mb-6 inline-block"
-      >
-        &larr; Back
-      </Link>
+    <div className="mx-auto max-w-[1200px] px-6 py-12">
+      <div className="mb-2 font-mono text-[11px] uppercase tracking-[0.12em] text-muted">
+        <Link href="/dashboard" className="hover:text-text">
+          workspace / apps
+        </Link>{" "}
+        /{" "}
+        <Link href={`/dashboard/apps/${id}`} className="hover:text-text">
+          {id.slice(0, 8)}
+        </Link>{" "}
+        / <span className="text-text">messages</span>
+      </div>
 
-      <h1 className="text-3xl font-semibold mb-8">Send history</h1>
+      <h1 className="mb-8 font-mono text-[36px] font-extrabold leading-[1.02] tracking-[-0.025em] text-text">
+        messages.
+      </h1>
 
       {messages.isLoading ? (
-        <p className="text-sm text-zinc-500">Loading...</p>
-      ) : !messages.data || messages.data.length === 0 ? (
-        <div className="border border-dashed border-white/10 rounded-xl p-12 text-center text-sm text-zinc-500">
-          No messages sent yet.
+        <p className="font-mono text-[12px] text-muted">
+          <span className="text-accent">●</span> loading…
+        </p>
+      ) : !msgList || msgList.length === 0 ? (
+        <div className="border border-dashed border-rule-strong px-6 py-16 text-center font-mono text-[12px] text-muted">
+          <span className="text-accent">○</span> no messages sent yet
         </div>
       ) : (
-        <div className="space-y-2">
-          {messages.data.map((msg) => (
+        <div className="border border-rule-strong bg-surface">
+          <div className="grid grid-cols-[120px_80px_1fr_180px] items-center gap-4 border-b border-rule bg-[#050505] px-5 py-3 font-mono text-[10px] uppercase tracking-[0.12em] text-muted">
+            <span>status</span>
+            <span>platform</span>
+            <span>title · body</span>
+            <span className="text-right">sent_at</span>
+          </div>
+          {msgList.map((msg, i) => (
             <div
               key={msg.id}
-              className="border border-white/10 rounded-lg p-4"
+              className={`px-5 py-4 ${
+                i < msgList.length - 1 ? "border-b border-rule" : ""
+              }`}
             >
-              <div className="flex items-center justify-between mb-2">
-                <div className="flex items-center gap-3">
-                  <StatusBadge status={msg.status} />
-                  <span className="text-xs uppercase text-zinc-500">
-                    {msg.platform}
-                  </span>
-                  <span className="text-xs text-zinc-500 font-mono">
-                    ...{msg.to.slice(-12)}
-                  </span>
+              <div className="grid grid-cols-[120px_80px_1fr_180px] items-start gap-4">
+                <StatusCell status={msg.status} />
+                <span className="font-mono text-[11px] uppercase tracking-[0.08em] text-muted">
+                  {msg.platform}
+                </span>
+                <div>
+                  {msg.title && (
+                    <p className="font-mono text-[13px] font-semibold text-text">
+                      {msg.title}
+                    </p>
+                  )}
+                  {msg.body && (
+                    <p className="mt-1 line-clamp-1 font-sans text-[13px] text-muted-strong">
+                      {msg.body}
+                    </p>
+                  )}
+                  <p className="mt-1 font-mono text-[10px] text-muted">
+                    …{msg.to.slice(-16)}
+                  </p>
+                  {msg.error && (
+                    <p className="mt-2 font-mono text-[11px] text-error">
+                      <span>●</span> {msg.error}
+                    </p>
+                  )}
                 </div>
-                <span className="text-xs text-zinc-600">
-                  {new Date(msg.createdAt).toLocaleString()}
+                <span className="tnum text-right font-mono text-[11px] text-muted">
+                  {new Date(msg.createdAt)
+                    .toISOString()
+                    .replace("T", " ")
+                    .slice(0, 19)}
                 </span>
               </div>
-              {msg.title && (
-                <p className="text-sm font-medium">{msg.title}</p>
-              )}
-              {msg.body && (
-                <p className="text-sm text-zinc-400 line-clamp-2">{msg.body}</p>
-              )}
-              {msg.error && (
-                <p className="text-xs text-red-400 mt-2 font-mono">
-                  {msg.error}
-                </p>
-              )}
             </div>
           ))}
         </div>
@@ -68,19 +92,26 @@ export default function MessagesPage(props: {
   );
 }
 
-function StatusBadge({ status }: { status: string }) {
+function StatusCell({ status }: { status: string }) {
   const colors: Record<string, string> = {
-    delivered: "bg-emerald-400/10 text-emerald-300",
-    failed: "bg-red-400/10 text-red-300",
-    sending: "bg-blue-400/10 text-blue-300",
-    queued: "bg-zinc-500/10 text-zinc-400",
-    expired: "bg-orange-400/10 text-orange-300",
+    delivered: "text-success",
+    failed: "text-error",
+    sending: "text-accent",
+    queued: "text-muted",
+    expired: "text-warning",
   };
+  const dots: Record<string, string> = {
+    delivered: "●",
+    failed: "●",
+    sending: "●",
+    queued: "○",
+    expired: "●",
+  };
+  const color = colors[status] ?? colors.queued;
+  const dot = dots[status] ?? dots.queued;
   return (
-    <span
-      className={`text-xs px-2 py-0.5 rounded-full ${colors[status] ?? colors.queued}`}
-    >
-      {status}
+    <span className={`font-mono text-[11px] uppercase tracking-[0.1em] ${color}`}>
+      {dot} {status}
     </span>
   );
 }

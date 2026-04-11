@@ -37,107 +37,139 @@ export default function ApnsCredentialsPage(props: {
   }
 
   return (
-    <div className="max-w-2xl mx-auto px-6 py-12">
-      <Link
-        href={`/dashboard/apps/${id}`}
-        className="text-sm text-zinc-500 hover:text-zinc-200 mb-6 inline-block"
-      >
-        &larr; Back
-      </Link>
+    <div className="mx-auto max-w-[720px] px-6 py-12">
+      <div className="mb-2 font-mono text-[11px] uppercase tracking-[0.12em] text-muted">
+        <Link href="/dashboard" className="hover:text-text">
+          workspace / apps
+        </Link>{" "}
+        /{" "}
+        <Link href={`/dashboard/apps/${id}`} className="hover:text-text">
+          {id.slice(0, 8)}
+        </Link>{" "}
+        / <span className="text-text">credentials / apns</span>
+      </div>
 
-      <h1 className="text-3xl font-semibold mb-2">APNs credentials</h1>
-      <p className="text-sm text-zinc-500 mb-8">
+      <h1 className="mb-2 font-mono text-[36px] font-extrabold leading-[1.02] tracking-[-0.025em] text-text">
+        apns credentials.
+      </h1>
+      <p className="mb-10 font-sans text-[14px] leading-[1.55] text-muted-strong">
         Upload your Apple Push Notification Service key. The .p8 file content
         is encrypted with AES-GCM before being stored in D1.
       </p>
 
-      <form onSubmit={handleSubmit} className="space-y-4">
-        <div>
-          <label className="block text-xs font-medium text-zinc-400 mb-2">
-            Key ID
-          </label>
-          <input
-            type="text"
-            required
+      <form
+        onSubmit={handleSubmit}
+        className="space-y-0 border border-rule-strong bg-surface"
+      >
+        <div className="flex items-center justify-between border-b border-rule px-5 py-3 font-mono text-[11px] uppercase tracking-[0.12em] text-muted">
+          <span>
+            <span className="text-accent">├&nbsp;</span>
+            <span className="text-text">upload_apns_key</span>
+          </span>
+          <span>
+            <span className="text-accent">●</span> encrypted at rest
+          </span>
+        </div>
+        <div className="space-y-5 px-6 py-6">
+          <Field
+            label="key_id"
             value={keyId}
-            onChange={(e) => setKeyId(e.target.value)}
-            className="w-full rounded-lg border border-white/10 bg-white/5 px-4 py-2 text-sm font-mono focus:outline-none focus:border-white/30"
+            onChange={setKeyId}
             placeholder="ABC1234567"
           />
-        </div>
-
-        <div>
-          <label className="block text-xs font-medium text-zinc-400 mb-2">
-            Team ID
-          </label>
-          <input
-            type="text"
-            required
+          <Field
+            label="team_id"
             value={teamId}
-            onChange={(e) => setTeamId(e.target.value)}
-            className="w-full rounded-lg border border-white/10 bg-white/5 px-4 py-2 text-sm font-mono focus:outline-none focus:border-white/30"
+            onChange={setTeamId}
             placeholder="DEF2345678"
           />
-        </div>
-
-        <div>
-          <label className="block text-xs font-medium text-zinc-400 mb-2">
-            Bundle ID
-          </label>
-          <input
-            type="text"
-            required
+          <Field
+            label="bundle_id"
             value={bundleId}
-            onChange={(e) => setBundleId(e.target.value)}
-            className="w-full rounded-lg border border-white/10 bg-white/5 px-4 py-2 text-sm font-mono focus:outline-none focus:border-white/30"
-            placeholder="io.akshit.myapp"
+            onChange={setBundleId}
+            placeholder="io.acme.myapp"
           />
-        </div>
+          <div>
+            <label className="mb-2 block font-mono text-[10px] uppercase tracking-[0.12em] text-muted">
+              p8_private_key
+            </label>
+            <textarea
+              required
+              value={privateKey}
+              onChange={(e) => setPrivateKey(e.target.value)}
+              rows={10}
+              className="w-full rounded-none border border-rule-strong bg-bg px-4 py-3 font-mono text-[12px] text-text placeholder:text-muted focus:border-accent focus:outline-none"
+              placeholder={
+                "-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----"
+              }
+            />
+          </div>
 
-        <div>
-          <label className="block text-xs font-medium text-zinc-400 mb-2">
-            .p8 private key
+          <label className="flex cursor-pointer items-center gap-3 font-mono text-[12px] text-muted-strong">
+            <input
+              type="checkbox"
+              checked={production}
+              onChange={(e) => setProduction(e.target.checked)}
+              className="h-4 w-4 accent-accent"
+            />
+            <span>
+              <span className="text-accent">●</span> production environment
+              (uncheck for sandbox)
+            </span>
           </label>
-          <textarea
-            required
-            value={privateKey}
-            onChange={(e) => setPrivateKey(e.target.value)}
-            rows={10}
-            className="w-full rounded-lg border border-white/10 bg-white/5 px-4 py-3 text-xs font-mono focus:outline-none focus:border-white/30"
-            placeholder={"-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----"}
-          />
-        </div>
 
-        <div className="flex items-center gap-3">
-          <input
-            type="checkbox"
-            id="production"
-            checked={production}
-            onChange={(e) => setProduction(e.target.checked)}
-          />
-          <label htmlFor="production" className="text-sm text-zinc-400">
-            Production environment (uncheck for sandbox)
-          </label>
-        </div>
+          {error && (
+            <p className="font-mono text-[12px] text-error">
+              <span>●</span> {error}
+            </p>
+          )}
 
-        {error && <p className="text-sm text-red-400">{error}</p>}
-
-        <div className="flex items-center gap-3 pt-4">
-          <button
-            type="submit"
-            disabled={uploadApns.isPending}
-            className="rounded-lg bg-white text-black px-4 py-2 text-sm font-medium hover:bg-zinc-200 disabled:opacity-50"
-          >
-            {uploadApns.isPending ? "Saving..." : "Save credentials"}
-          </button>
-          <Link
-            href={`/dashboard/apps/${id}`}
-            className="text-sm text-zinc-400 hover:text-zinc-200"
-          >
-            Cancel
-          </Link>
+          <div className="flex items-center gap-3 pt-2">
+            <button
+              type="submit"
+              disabled={uploadApns.isPending}
+              className="inline-flex items-center gap-2 rounded-none bg-text px-4 py-2.5 font-mono text-[12px] font-semibold text-black hover:bg-accent disabled:opacity-50"
+            >
+              <span className="text-accent">$</span>{" "}
+              {uploadApns.isPending ? "saving..." : "save_credentials"}
+            </button>
+            <Link
+              href={`/dashboard/apps/${id}`}
+              className="font-mono text-[12px] uppercase tracking-[0.1em] text-muted hover:text-text"
+            >
+              cancel
+            </Link>
+          </div>
         </div>
       </form>
+    </div>
+  );
+}
+
+function Field({
+  label,
+  value,
+  onChange,
+  placeholder,
+}: {
+  label: string;
+  value: string;
+  onChange: (v: string) => void;
+  placeholder?: string;
+}) {
+  return (
+    <div>
+      <label className="mb-2 block font-mono text-[10px] uppercase tracking-[0.12em] text-muted">
+        {label}
+      </label>
+      <input
+        type="text"
+        required
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder={placeholder}
+        className="w-full rounded-none border border-rule-strong bg-transparent px-4 py-2.5 font-mono text-[13px] text-text placeholder:text-muted focus:border-accent focus:outline-none"
+      />
     </div>
   );
 }

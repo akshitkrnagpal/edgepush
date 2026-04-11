@@ -57,7 +57,7 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
       value={{ toasts, push, success, error, info, dismiss }}
     >
       {children}
-      <div className="fixed bottom-4 right-4 z-50 flex flex-col gap-2 max-w-sm">
+      <div className="fixed bottom-5 right-5 z-50 flex max-w-sm flex-col gap-2">
         {toasts.map((toast) => (
           <ToastCard key={toast.id} toast={toast} onDismiss={dismiss} />
         ))}
@@ -78,21 +78,39 @@ function ToastCard({
     requestAnimationFrame(() => setEntered(true));
   }, []);
 
-  const colors: Record<Toast["kind"], string> = {
-    success: "border-emerald-400/40 bg-emerald-400/[0.07] text-emerald-200",
-    error: "border-red-400/40 bg-red-400/[0.07] text-red-200",
-    info: "border-white/20 bg-white/[0.04] text-zinc-200",
+  const borderByKind: Record<Toast["kind"], string> = {
+    success: "border-success text-success",
+    error: "border-error text-error",
+    info: "border-rule-strong text-text",
+  };
+  const dotByKind: Record<Toast["kind"], string> = {
+    success: "text-success",
+    error: "text-error",
+    info: "text-accent",
+  };
+  const labelByKind: Record<Toast["kind"], string> = {
+    success: "ok",
+    error: "err",
+    info: "info",
   };
 
   return (
     <div
-      className={`border rounded-xl px-4 py-3 backdrop-blur transition-all duration-200 ${colors[toast.kind]} ${entered ? "opacity-100 translate-y-0" : "opacity-0 translate-y-2"}`}
+      className={`border bg-surface px-4 py-3 font-mono text-[12px] ${borderByKind[toast.kind]} ${
+        entered
+          ? "translate-y-0 opacity-100"
+          : "translate-y-2 opacity-0"
+      } transition-all duration-200`}
     >
       <div className="flex items-start gap-3">
-        <span className="text-sm flex-1">{toast.message}</span>
+        <span className={`shrink-0 ${dotByKind[toast.kind]}`}>●</span>
+        <span className="mr-2 shrink-0 uppercase tracking-[0.12em] text-muted">
+          {labelByKind[toast.kind]}
+        </span>
+        <span className="flex-1 text-text">{toast.message}</span>
         <button
           onClick={() => onDismiss(toast.id)}
-          className="text-xs opacity-60 hover:opacity-100"
+          className="text-[11px] text-muted hover:text-text"
           aria-label="Dismiss"
         >
           ✕
