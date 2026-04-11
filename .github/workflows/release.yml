@@ -59,19 +59,13 @@ jobs:
       - name: Build
         run: pnpm --filter @edgepush/sdk --filter @edgepush/cli build
 
-      # pnpm pack handles the workspace:* → real version rewrite that npm
-      # publish doesn't know how to do. Then npm publish (>=11.5.1) handles
-      # the OIDC handshake with Trusted Publishers.
-      - name: Pack @edgepush/sdk
-        run: pnpm pack --pack-destination "$RUNNER_TEMP"
+      # pnpm publish rewrites workspace:* deps to the real version on the
+      # fly and shells out to the npm CLI for the actual upload, so the
+      # latest npm above is what handles the OIDC handshake.
+      - name: Publish @edgepush/sdk
+        run: pnpm publish --access public --no-git-checks --provenance
         working-directory: packages/sdk
 
-      - name: Pack @edgepush/cli
-        run: pnpm pack --pack-destination "$RUNNER_TEMP"
-        working-directory: packages/cli
-
-      - name: Publish @edgepush/sdk
-        run: npm publish "$RUNNER_TEMP"/edgepush-sdk-*.tgz --access public --provenance
-
       - name: Publish @edgepush/cli
-        run: npm publish "$RUNNER_TEMP"/edgepush-cli-*.tgz --access public --provenance
+        run: pnpm publish --access public --no-git-checks --provenance
+        working-directory: packages/cli
