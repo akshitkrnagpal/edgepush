@@ -30,3 +30,4 @@ Thumbs.db
 *.pem
 *.key
 service-account*.json
+.gstack/
