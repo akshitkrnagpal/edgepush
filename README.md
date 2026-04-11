@@ -2,32 +2,54 @@
 
 > Open source push notifications for iOS and Android. Self-hosted on Cloudflare Workers, bring your own APNs and FCM credentials.
 
+**Server + dashboard: [AGPL-3.0](./LICENSE). SDK + CLI: MIT.** See [`COMMERCIAL.md`](./COMMERCIAL.md) for the dual-license details and when you'd need a commercial license (most users never do).
+
 One API. Native APNs and FCM under the hood. Credentials encrypted in D1, dispatch fanned out through Cloudflare Queues, per-app rate limiting via Durable Objects, delivery receipts you can poll or pipe into a webhook. Runs at the edge so the only thing between your server and a user's device is a Cloudflare worker you control.
 
 If you ship a mobile app and you've ever felt weird about handing your APNs key to a third party, this is for you.
 
 ## Status
 
-Early. Working end-to-end (send, dispatch, receipts, webhooks, dashboard) but not yet production-hardened. APIs may shift before 1.0. File issues, send PRs.
+**v0.1, launch-ready.** Working end to end — send, dispatch, receipts, webhooks, dashboard, credential health probes, monthly quotas, Stripe billing, nightly backups. APIs may shift before 1.0. See [`CHANGELOG.md`](./CHANGELOG.md) for the full list of what landed and what was deliberately deferred.
 
 ## Features
 
+### Push sending
 - Single `POST /v1/send` endpoint for iOS and Android
-- Bring-your-own APNs `.p8` key and FCM service account JSON, encrypted at rest
-- Per-app token-bucket rate limiting (Durable Object backed)
-- Async dispatch via Cloudflare Queues with retries and a dead letter queue
-- Delivery receipts: poll `/v1/receipts/:id` or set a webhook
-- HMAC-signed webhook deliveries
-- Dashboard for app management, credential upload, audit log, test sends
-- Typed SDK (`@edgepush/sdk`) and CLI (`@edgepush/cli`)
+- BYO APNs `.p8` key and FCM service account JSON, encrypted in D1 with AES-GCM
+- Async dispatch via Cloudflare Queues with automatic retries and a dead letter queue
+- Delivery receipts: poll `GET /v1/receipts/:id` or set a webhook
+- HMAC-signed outbound webhook deliveries
+- Per-app token-bucket rate limiting via a Durable Object
+
+### Observability + reliability
+- Searchable delivery event log with status filter and keyset pagination
+- Active credential health probes: every APNs and FCM credential is authenticated against Apple and Google every 24h; broken creds trigger an email alert before your users notice
+- Dead-letter queue consumer that logs every dead-letter to `worker_errors` for the operator digest
+- Daily operator digest email: summary of `worker_errors` by kind, D1 size status, only sent when there's something to report
+- Kill switch KV key the operator can flip from a single `wrangler kv key put` command
+- Operator scripts: `scripts/operator/replay-dlq.ts` and `scripts/operator/inspect-app.ts` for incident response and support workflows
+
+### Billing (hosted tier)
+- Stripe Checkout with HMAC-signed `client_reference_id` (no cardholder-email-vs-signup-email bug class)
+- 5-event webhook handler with idempotency dedup, 5-minute replay window, raw-fetch (no `stripe` npm package)
+- Monthly send counter with atomic reservation — race-safe on concurrent sends at the quota boundary
+- Plan gating via `HOSTED_MODE` env var: `false` means unlimited (self-host), `true` enforces the Free / Pro / Enterprise limits
+
+### Developer + operator experience
+- Dashboard for app management, credential upload, credential health, recent deliveries, audit log, test sends, account deletion, billing
+- Typed SDK (`@edgepush/sdk`) and CLI (`@edgepush/cli`) published to npm
 - GitHub OAuth via Better Auth
-- Custom domains, observability, runs entirely on Cloudflare
+- Scheduled crons for credential probes and operator digest
+- Nightly D1 backup via GitHub Actions with optional AES-256-CBC encryption and R2 upload
+- 70 unit tests covering the cryptographic + response-interpretation logic
+- `SELFHOST.md` full self-host guide + `OPERATOR.md` production runbook
 
 ## Hosted
 
-The fastest way to try it is the hosted instance at [edgepush.dev](https://edgepush.dev). Sign in with GitHub, create an app, upload credentials, send a test push from the dashboard. No credit card.
+The fastest way to try it is the hosted instance at [edgepush.dev](https://edgepush.dev). Sign in with GitHub, create an app, upload credentials, send a test push from the dashboard. No credit card on the free tier. The Pro tier is $29/mo — see [`/pricing`](https://edgepush.dev/pricing).
 
-If you'd rather run it yourself, keep reading.
+If you'd rather run it yourself, [`SELFHOST.md`](./SELFHOST.md) is the full guide. If you're running your OWN hosted tier with billing (i.e., you want to sell an edgepush deployment to someone), [`OPERATOR.md`](./OPERATOR.md) is the production runbook.
 
 ## Send your first push
 
@@ -51,85 +73,38 @@ The SDK works in any environment with `fetch`: Node 18+, Bun, Deno, Cloudflare W
 
 ## Self-host on Cloudflare
 
-You'll end up with two workers: `edgepush-api` (the HTTP API) and `edgepush-web` (the Next.js dashboard). Plan on 10 minutes if you have a Cloudflare account already.
+**Full guide: [`SELFHOST.md`](./SELFHOST.md)** (prerequisites, resource creation, secrets, deploy, first-push smoke test, troubleshooting).
 
-### Prerequisites
-
-- Cloudflare account
-- Node 20+ and pnpm 10+
-- A GitHub OAuth app for sign in (Settings → Developer settings → OAuth Apps → New)
-
-### 1. Clone and install
+Quick summary if you already know Cloudflare Workers:
 
 ```bash
 git clone https://github.com/akshitkrnagpal/edgepush.git
-cd edgepush
-pnpm install
-```
-
-### 2. Create Cloudflare resources
-
-From `apps/api/`:
-
-```bash
+cd edgepush && pnpm install
 cd apps/api
 
-# D1 database for apps, credentials, messages, audit log
+# Create resources
 pnpm wrangler d1 create edgepush
-
-# KV namespace for hot lookups (api key → app)
-pnpm wrangler kv namespace create CACHE
-
-# Queue for dispatch + dead letter queue
+pnpm wrangler kv namespace create edgepush-cache
 pnpm wrangler queues create edgepush-dispatch
 pnpm wrangler queues create edgepush-dispatch-dlq
-```
 
-Each command prints an id. Paste them into `apps/api/wrangler.jsonc` under `d1_databases[0].database_id` and `kv_namespaces[0].id`. The Durable Object binding (`RATE_LIMITER`) and the queue names are already wired in.
+# Paste the printed IDs into wrangler.jsonc
 
-### 3. Set secrets
-
-```bash
-# 32-byte hex key used to encrypt APNs/FCM credentials in D1
-pnpm wrangler secret put ENCRYPTION_KEY
-# generate one with: openssl rand -hex 32
-
-# Better Auth
-pnpm wrangler secret put BETTER_AUTH_SECRET
-# generate one with: openssl rand -base64 32
-
+# Set secrets (see SELFHOST.md for the full list)
+pnpm wrangler secret put ENCRYPTION_KEY       # openssl rand -hex 32
+pnpm wrangler secret put BETTER_AUTH_SECRET   # openssl rand -hex 32
 pnpm wrangler secret put GITHUB_CLIENT_ID
 pnpm wrangler secret put GITHUB_CLIENT_SECRET
-```
 
-`BETTER_AUTH_URL` and `DASHBOARD_URL` are non-secret and live in `wrangler.jsonc` under `vars`. Update them to point at the domains you'll use.
-
-### 4. Run migrations
-
-```bash
+# Migrate + deploy
 pnpm db:migrate:remote
+pnpm deploy
+cd ../web && pnpm deploy
 ```
 
-### 5. Deploy
+Self-host runs with `HOSTED_MODE=false` — unlimited apps and events, no billing gates, no credential probe rate-limit concerns from the hosted tier. Everything else (SDK, CLI, API, webhooks, dashboard, DLQ, probe cron) works the same as `edgepush.dev`.
 
-```bash
-# from apps/api
-pnpm deploy
-
-# from apps/web
-cd ../web
-pnpm deploy
-```
-
-Both workers will be live on their `*.workers.dev` subdomains. Wire up your custom domains in `wrangler.jsonc` (`routes[*].pattern`) and redeploy.
-
-### 6. Set the GitHub OAuth callback
-
-In your GitHub OAuth app settings, set the authorization callback URL to `https://<your-api-domain>/api/auth/callback/github`.
-
-### Optional: CI/CD via Workers Builds
-
-In the Cloudflare dashboard, connect your fork to each worker (Workers & Pages → worker → Settings → Builds → Connect to Git). Set the deploy command to `pnpm run deploy` for both workers and the root directory to `apps/api` or `apps/web`. Push to main to deploy.
+If you plan to run your own paid tier (Stripe Checkout, billing webhooks, operator digest, backups), also read [`OPERATOR.md`](./OPERATOR.md).
 
 ## Architecture
 
@@ -213,10 +188,23 @@ edgepush receipt <id>
 
 ## Contributing
 
-PRs welcome. The two highest-leverage areas right now are tests (`apps/api` has none) and docs/examples (React Native, native iOS, native Android). Open an issue first if you're planning anything large so we can talk about scope.
+PRs welcome. The highest-leverage areas right now are:
 
-Code style is enforced by eslint and prettier defaults. Run `pnpm lint && pnpm typecheck && pnpm build` before pushing.
+- **Integration tests** for the send path, dispatch consumer, and account-delete cascade (v0.1 has 70 pure-function unit tests but no D1-backed integration tests yet — see `CHANGELOG.md` "Known not-yet-landed" for context)
+- **Mobile SDK examples**: React Native, native iOS, native Android
+- **Self-host troubleshooting** — if you hit something that's not in `SELFHOST.md`'s Troubleshooting section, open an issue with the fix
+
+Open an issue first if you're planning anything large so we can talk about scope. All contributions to the server (`apps/api`) or dashboard (`apps/web`) land under AGPL-3.0; contributions to the SDK/CLI/shared packages stay MIT. See [`COMMERCIAL.md`](./COMMERCIAL.md) for the dual-license rationale.
+
+Code style is enforced by eslint and prettier defaults. Run `pnpm lint && pnpm typecheck && pnpm test && pnpm build` before pushing — all four should be green.
 
 ## License
 
-MIT. See [LICENSE](./LICENSE).
+Dual licensed:
+
+- **`apps/api` (server) + `apps/web` (dashboard)**: [AGPL-3.0-only](./LICENSE)
+- **`packages/sdk` + `packages/cli` + `packages/shared`**: [MIT](./packages/sdk/LICENSE)
+
+The SDK and CLI are MIT so you can embed them in a closed-source backend or mobile app without AGPL obligations. The server and dashboard are AGPL so nobody can fork edgepush into a closed-source competing hosted service.
+
+See [`COMMERCIAL.md`](./COMMERCIAL.md) for the commercial license option (rare — most users never need it).
