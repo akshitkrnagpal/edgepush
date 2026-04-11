@@ -9,9 +9,19 @@ export default function Home() {
           <span>
             <span className="text-accent">●</span> edgepush.dev
           </span>
-          <span>v0.0 · alpha</span>
+          <span>v0.1.0 · alpha</span>
+          <a
+            href="https://github.com/akshitkrnagpal/edgepush"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="hidden hover:text-text sm:inline"
+          >
+            github.com/akshitkrnagpal/edgepush
+          </a>
           <span className="ml-auto hidden sm:inline">mit licensed</span>
-          <span className="hidden sm:inline">● ready</span>
+          <span className="hidden sm:inline">
+            <span className="text-success">●</span> live
+          </span>
         </div>
       </div>
 
@@ -75,24 +85,33 @@ export default function Home() {
             <span className="text-muted">.</span>
           </h1>
           <p className="mb-8 max-w-[520px] font-sans text-[17px] leading-[1.55] text-muted-strong sm:text-[18px]">
-            Open source alternative to Expo Push Notification Service. Send
-            native iOS and Android pushes through a single API, running on
-            Cloudflare Workers. Bring your own APNs and FCM credentials.
-            Self-host in one{" "}
-            <span className="font-mono text-text">wrangler deploy</span>.
+            Open source push notifications for iOS and Android. Send through a
+            single API running on{" "}
+            <span className="font-mono text-text">Cloudflare Workers</span>,
+            with your own APNs and FCM credentials encrypted at rest. Use the
+            hosted instance free, or self-host on your own Cloudflare account.
           </p>
           <div className="mb-10 flex flex-wrap gap-3">
             <Link
               href="/sign-in"
               className="inline-flex items-center gap-2 rounded-none bg-text px-5 py-3 font-mono text-[12px] font-semibold text-black hover:bg-accent"
             >
-              <span className="text-accent">$</span> sign_in_with_github
+              <GithubMark />
+              sign_in_with_github
             </Link>
-            <Link
-              href="/docs"
+            <a
+              href="https://github.com/akshitkrnagpal/edgepush"
+              target="_blank"
+              rel="noopener noreferrer"
               className="inline-flex items-center gap-2 rounded-none border border-rule-strong px-5 py-3 font-mono text-[12px] font-semibold text-text hover:border-text"
             >
-              read_the_docs <span className="text-muted">─&gt;</span>
+              view_on_github <span className="text-muted">─&gt;</span>
+            </a>
+            <Link
+              href="/docs"
+              className="inline-flex items-center gap-2 rounded-none border border-rule-strong px-5 py-3 font-mono text-[12px] font-semibold text-muted-strong hover:border-text hover:text-text"
+            >
+              read_the_docs
             </Link>
           </div>
           <div className="flex flex-wrap gap-5 font-mono text-[11px] text-muted">
@@ -119,17 +138,15 @@ export default function Home() {
                 <span className="text-accent">├&nbsp;</span>
                 <span className="text-text">server.ts</span>
               </span>
-              <span className="hidden sm:inline">curl</span>
-              <span className="hidden sm:inline">python</span>
             </div>
             <span>
-              <span className="text-accent">●</span> connected
+              <span className="text-accent">$</span> example
             </span>
           </div>
           <pre className="overflow-x-auto p-5 text-text whitespace-pre">
             <code>
               <span className="text-muted">
-                {"// one api. apns and fcm. no lock-in."}
+                {"// one api. native apns + fcm. no lock-in."}
               </span>
               {"\n"}
               <span className="text-accent">import</span>{" "}
@@ -144,33 +161,40 @@ export default function Home() {
               {"\n  "}
               <span className="text-muted-strong">apiKey</span>
               {": process.env."}
-              <span className="text-muted-strong">EDGEPUSH_KEY</span>
+              <span className="text-muted-strong">EDGEPUSH_API_KEY</span>
               {",\n"}
               {"});\n\n"}
+              <span className="text-accent">const</span>{" "}
+              <span className="text-muted-strong">ticket</span>
+              {" = "}
               <span className="text-accent">await</span>{" "}
               <span className="text-muted-strong">client</span>.send({"{"}
               {"\n  "}
               <span className="text-muted-strong">to</span>
-              {":     "}
-              <span className="text-text">{'"ExponentPushToken[xx…]"'}</span>
-              {",\n  "}
+              {":    "}
+              <span className="text-text">{'"a1b2c3d4…"'}</span>
+              {",  "}
+              <span className="text-muted">{"// apns or fcm token"}</span>
+              {"\n  "}
               <span className="text-muted-strong">title</span>
-              {":  "}
-              <span className="text-text">{'"New order"'}</span>
+              {": "}
+              <span className="text-text">{'"Build passed"'}</span>
               {",\n  "}
               <span className="text-muted-strong">body</span>
-              {":   "}
-              <span className="text-text">{'"Your coffee is ready"'}</span>
+              {":  "}
+              <span className="text-text">{'"Deploy to prod is live."'}</span>
               {",\n  "}
               <span className="text-muted-strong">data</span>
-              {":   { "}
-              <span className="text-muted-strong">orderId</span>
+              {":  { "}
+              <span className="text-muted-strong">url</span>
               {": "}
-              <span className="text-text">{'"abc123"'}</span>
+              <span className="text-text">{'"/deploys/abc123"'}</span>
               {" },\n"}
-              {"});\n"}
+              {"});\n\n"}
               <span className="text-muted">
-                {"// → ticket_id: tk_01HX…  ● queued"}
+                {"// → ticket.id: tk_01HX2A9P4M  "}
+                <span className="text-success">●</span>
+                {" queued"}
               </span>
             </code>
           </pre>
@@ -184,7 +208,7 @@ export default function Home() {
             <span className="text-accent">tail -f</span> push-events.log
           </span>
           <span>
-            8 events / last 60s <span className="text-accent">●</span> live
+            <span className="text-accent">$</span> example feed
           </span>
         </div>
         <div className="overflow-hidden border border-rule-strong bg-surface px-5 py-4 font-mono text-[12.5px] leading-[1.9] text-muted-strong">
@@ -239,6 +263,124 @@ export default function Home() {
         </div>
       </section>
 
+      {/* Quickstart - multi-language code panels */}
+      <section className="mx-auto max-w-[1440px] border-t border-rule px-6 py-16">
+        <div className="mb-8 flex items-baseline justify-between gap-4">
+          <div className="font-mono text-[11px] uppercase tracking-[0.14em] text-muted">
+            <span className="text-accent">─&nbsp;</span> quickstart
+          </div>
+          <div className="font-mono text-[11px] uppercase tracking-[0.12em] text-muted">
+            send from any runtime
+          </div>
+        </div>
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+          <CodePanel
+            tab="node.ts"
+            label="@edgepush/sdk"
+            lines={[
+              [
+                ["muted", "// npm install @edgepush/sdk"],
+              ],
+              [
+                ["accent", "import"],
+                ["", " "],
+                ["muted-strong", "{ Edgepush }"],
+                ["", " "],
+                ["accent", "from"],
+                ["", " "],
+                ["text", '"@edgepush/sdk"'],
+                ["", ";"],
+              ],
+              [],
+              [
+                ["accent", "const"],
+                ["", " "],
+                ["muted-strong", "client"],
+                ["", " = "],
+                ["accent", "new"],
+                ["", " Edgepush({ "],
+                ["muted-strong", "apiKey"],
+                ["", ": "],
+                ["text", '"com.acme.app|sk_…"'],
+                ["", " });"],
+              ],
+              [],
+              [
+                ["accent", "await"],
+                ["", " "],
+                ["muted-strong", "client"],
+                ["", ".send({"],
+              ],
+              [
+                ["", "  "],
+                ["muted-strong", "to"],
+                ["", ":    "],
+                ["text", '"a1b2c3d4…"'],
+                ["", ","],
+              ],
+              [
+                ["", "  "],
+                ["muted-strong", "title"],
+                ["", ": "],
+                ["text", '"Hello"'],
+                ["", ","],
+              ],
+              [
+                ["", "  "],
+                ["muted-strong", "body"],
+                ["", ":  "],
+                ["text", '"From Node"'],
+                ["", ","],
+              ],
+              [["", "});"]],
+            ]}
+          />
+          <CodePanel
+            tab="curl"
+            label="POST /v1/send"
+            lines={[
+              [
+                ["muted", "# any HTTP client works"],
+              ],
+              [["text", "curl https://api.edgepush.dev/v1/send \\"]],
+              [
+                ["", "  -H "],
+                ["text", "\"authorization: Bearer com.acme.app|sk_…\""],
+                ["", " \\"],
+              ],
+              [
+                ["", "  -H "],
+                ["text", "\"content-type: application/json\""],
+                ["", " \\"],
+              ],
+              [["", "  -d "], ["text", "'{"]],
+              [
+                ["", "    "],
+                ["text", "\"messages\": [{"],
+              ],
+              [
+                ["", "      "],
+                ["text", "\"to\": \"a1b2c3d4…\","],
+              ],
+              [
+                ["", "      "],
+                ["text", "\"title\": \"Hello\","],
+              ],
+              [
+                ["", "      "],
+                ["text", "\"body\": \"From curl\""],
+              ],
+              [["", "    "], ["text", "}]"]],
+              [["", "  "], ["text", "}'"]],
+            ]}
+          />
+        </div>
+        <div className="mt-6 font-mono text-[11px] text-muted">
+          react native? bun? deno? same SDK. needs only{" "}
+          <span className="text-text">fetch</span>.
+        </div>
+      </section>
+
       {/* How it works */}
       <section className="mx-auto max-w-[1440px] border-t border-rule px-6 py-16">
         <div className="mb-8 font-mono text-[11px] uppercase tracking-[0.14em] text-muted">
@@ -253,12 +395,120 @@ export default function Home() {
           <Step
             n="02"
             title="generate an api key"
-            body="Keys are scoped to a single app and prefixed with the package name so they self-identify in logs: io.acme.myapp|abc..."
+            body="Keys are scoped to a single app and prefixed with the package name so they self-identify in logs: com.acme.myapp|sk_..."
           />
           <Step
             n="03"
             title="send from anywhere"
             body="Use the SDK or POST directly to /v1/send. Dispatched through Cloudflare Queues with automatic retries and a dead letter queue."
+          />
+        </div>
+      </section>
+
+      {/* Webhook example */}
+      <section className="mx-auto max-w-[1440px] border-t border-rule px-6 py-16">
+        <div className="mb-8 flex items-baseline justify-between gap-4">
+          <div className="font-mono text-[11px] uppercase tracking-[0.14em] text-muted">
+            <span className="text-accent">─&nbsp;</span> webhook events
+          </div>
+          <div className="font-mono text-[11px] uppercase tracking-[0.12em] text-muted">
+            HMAC-signed POST
+          </div>
+        </div>
+        <div className="grid grid-cols-1 gap-10 lg:grid-cols-[1fr_1.2fr] lg:items-start">
+          <div>
+            <h3 className="mb-3 font-mono text-[20px] font-bold text-text">
+              Push your delivery state.
+            </h3>
+            <p className="mb-4 max-w-md font-sans text-[15px] leading-[1.6] text-muted-strong">
+              Configure a webhook URL in the dashboard and edgepush will POST
+              every state change to your endpoint with an HMAC-SHA256 signature
+              over the raw body. No polling required.
+            </p>
+            <ul className="space-y-2 font-mono text-[12px] text-muted-strong">
+              <li>
+                <span className="text-success">●</span> message.delivered
+              </li>
+              <li>
+                <span className="text-warning">●</span> message.retry
+              </li>
+              <li>
+                <span className="text-error">●</span> message.failed
+              </li>
+              <li>
+                <span className="text-pending">○</span> message.invalid_token
+              </li>
+            </ul>
+          </div>
+          <CodePanel
+            tab="POST /your/webhook"
+            label={
+              <>
+                <span className="text-success">●</span> 200 OK
+              </>
+            }
+            lines={[
+              [
+                ["muted", "// headers"],
+              ],
+              [
+                ["muted-strong", "x-edgepush-event"],
+                ["", ":     "],
+                ["text", "message.delivered"],
+              ],
+              [
+                ["muted-strong", "x-edgepush-signature"],
+                ["", ": "],
+                ["text", "sha256=9f86d081…"],
+              ],
+              [
+                ["muted-strong", "x-edgepush-id"],
+                ["", ":        "],
+                ["text", "evt_01HX2A9P4M"],
+              ],
+              [],
+              [
+                ["muted", "// body"],
+              ],
+              [["text", "{"]],
+              [
+                ["", "  "],
+                ["text", "\"event\""],
+                ["", ": "],
+                ["text", "\"message.delivered\","],
+              ],
+              [
+                ["", "  "],
+                ["text", "\"id\""],
+                ["", ":    "],
+                ["text", "\"tk_01HX2A9P4M\","],
+              ],
+              [
+                ["", "  "],
+                ["text", "\"app\""],
+                ["", ":   "],
+                ["text", "\"com.acme.app\","],
+              ],
+              [
+                ["", "  "],
+                ["text", "\"to\""],
+                ["", ":    "],
+                ["text", "\"a1b2c3d4…\","],
+              ],
+              [
+                ["", "  "],
+                ["text", "\"platform\""],
+                ["", ": "],
+                ["text", "\"ios\","],
+              ],
+              [
+                ["", "  "],
+                ["text", "\"latency_ms\""],
+                ["", ": "],
+                ["text", "192"],
+              ],
+              [["text", "}"]],
+            ]}
           />
         </div>
       </section>
@@ -283,15 +533,167 @@ export default function Home() {
           />
           <Principle
             title="rate limiting built-in"
-            body="Per-app token bucket via Durable Objects. No surprise throttling from your own code. Tune it as you grow."
+            body="Per-app token bucket via Durable Objects. Survives Worker restarts, scoped to each app, retries with backoff on overflow."
           />
           <Principle
             title="webhook events"
-            body="HMAC-signed POSTs when a message is delivered or fails. Automatic invalid-token detection and cleanup."
+            body="HMAC-signed POSTs when a message is delivered, retried, or failed. Invalid tokens are flagged on the receipt so your code can prune them."
           />
           <Principle
             title="encrypted credentials"
             body="Your APNs .p8 and FCM service account JSON are encrypted at rest. The raw key is never exposed via the API."
+          />
+        </div>
+      </section>
+
+      {/* Comparison table */}
+      <section className="mx-auto max-w-[1440px] border-t border-rule px-6 py-16">
+        <div className="mb-8 flex items-baseline justify-between gap-4">
+          <div className="font-mono text-[11px] uppercase tracking-[0.14em] text-muted">
+            <span className="text-accent">─&nbsp;</span> how it compares
+          </div>
+          <div className="font-mono text-[11px] uppercase tracking-[0.12em] text-muted">
+            edgepush vs hosted push providers
+          </div>
+        </div>
+        <div className="overflow-x-auto border border-rule-strong bg-surface">
+          <table className="w-full font-mono text-[12.5px]">
+            <thead>
+              <tr className="border-b border-rule-strong bg-surface-2 text-left uppercase tracking-[0.1em] text-muted">
+                <th className="px-5 py-3 font-medium"> </th>
+                <th className="px-5 py-3 font-bold text-text">edgepush</th>
+                <th className="px-5 py-3 font-medium">expo push</th>
+                <th className="px-5 py-3 font-medium">onesignal</th>
+                <th className="px-5 py-3 font-medium">knock</th>
+              </tr>
+            </thead>
+            <tbody className="text-muted-strong">
+              <CompareRow
+                label="open source"
+                values={["yes", "no", "no", "no"]}
+              />
+              <CompareRow
+                label="self-hostable"
+                values={["yes", "no", "no", "no"]}
+              />
+              <CompareRow
+                label="byo apns + fcm"
+                values={["yes", "no", "yes", "yes"]}
+              />
+              <CompareRow
+                label="native token format"
+                values={["yes", "no (proprietary)", "yes", "yes"]}
+              />
+              <CompareRow
+                label="runs on cloudflare workers"
+                values={["yes", "no", "no", "no"]}
+              />
+              <CompareRow
+                label="per-message pricing"
+                values={["no", "no (rate-limited)", "yes", "yes"]}
+              />
+              <CompareRow
+                label="vendor lock-in"
+                values={["none", "high", "medium", "medium"]}
+              />
+              <CompareRow
+                label="cost (10k pushes/mo)"
+                values={["$0", "$0", "≈ $0", "≈ $25"]}
+              />
+            </tbody>
+          </table>
+        </div>
+        <p className="mt-4 font-sans text-[12px] text-muted">
+          Comparison reflects publicly documented pricing and features as of
+          April 2026. Other providers may have changed; check their docs.
+        </p>
+      </section>
+
+      {/* Pricing */}
+      <section className="mx-auto max-w-[1440px] border-t border-rule px-6 py-16">
+        <div className="mb-8 flex items-baseline justify-between gap-4">
+          <div className="font-mono text-[11px] uppercase tracking-[0.14em] text-muted">
+            <span className="text-accent">─&nbsp;</span> pricing
+          </div>
+          <div className="font-mono text-[11px] uppercase tracking-[0.12em] text-muted">
+            free. forever.
+          </div>
+        </div>
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+          <PricingCard
+            tag="hosted"
+            title="$0"
+            tagline="edgepush.dev"
+            body="Free hosted instance. No credit card. No seat limits. No per-message fee. Reasonable rate limits to keep the service healthy. Perfect for side projects, indie apps, and trying it out."
+            cta={{ href: "/sign-in", label: "$ sign_in_with_github" }}
+            features={[
+              "unlimited apps",
+              "unlimited api keys",
+              "BYO apns + fcm credentials",
+              "delivery receipts + webhooks",
+              "1000 pushes / minute / app",
+              "support via github issues",
+            ]}
+          />
+          <PricingCard
+            tag="self-host"
+            title="$0"
+            tagline="your cloudflare account"
+            body="Same code, on your own infra. Cloudflare's free tier covers most apps comfortably. You own the data, the credentials, the rate limits. No edgepush in the middle."
+            cta={{
+              href: "https://github.com/akshitkrnagpal/edgepush#self-host-on-cloudflare",
+              label: "$ deploy_your_own",
+              external: true,
+            }}
+            features={[
+              "MIT licensed source",
+              "two wrangler deploys",
+              "your D1, KV, queue, DO",
+              "your apns + fcm credentials",
+              "tunable rate limits",
+              "no telemetry",
+            ]}
+          />
+        </div>
+      </section>
+
+      {/* FAQ */}
+      <section className="mx-auto max-w-[1440px] border-t border-rule px-6 py-16">
+        <div className="mb-8 font-mono text-[11px] uppercase tracking-[0.14em] text-muted">
+          <span className="text-accent">─&nbsp;</span> faq
+        </div>
+        <div className="grid grid-cols-1 gap-x-12 gap-y-8 md:grid-cols-2">
+          <FaqItem
+            q="What if I already have APNs and FCM set up?"
+            a="Perfect — that's the model. You upload your existing .p8 key and Firebase service account JSON in the dashboard. edgepush never gets new credentials, you're using yours."
+          />
+          <FaqItem
+            q="Where are my credentials stored?"
+            a="Encrypted with AES-GCM and stored in a Cloudflare D1 row scoped to your app. The encryption key lives in a Worker secret, not in the database. The raw credential is never returned by the API after upload."
+          />
+          <FaqItem
+            q="Can I migrate from Expo Push?"
+            a="Yes. Expo wraps APNs and FCM with its own ExponentPushToken format. To migrate, you switch your app to register with the native APNs and FCM tokens directly (or read them from your existing Firebase project), then point your server at /v1/send. The token format is the only meaningful change."
+          />
+          <FaqItem
+            q="What's the rate limit on the hosted instance?"
+            a="1000 pushes per minute per app, per-app token bucket via a Durable Object. If you need more, self-host and tune the limit yourself, or open an issue and we can talk about raising it."
+          />
+          <FaqItem
+            q="Do you store device tokens for me?"
+            a="No, by design. edgepush is a dispatch layer, not a device registry. You manage your own token list (your users, your database, your truth). The receipt for each send tells you when a token has gone invalid so you can prune it."
+          />
+          <FaqItem
+            q="Is this production-ready?"
+            a="Honestly, not yet. v0.1 is the first public release. The send + dispatch + webhook flow is working end-to-end, but the test surface is thin and APIs may shift before 1.0. File an issue if you find rough edges."
+          />
+          <FaqItem
+            q="Why Cloudflare instead of AWS or Vercel?"
+            a="Workers + D1 + Queues + Durable Objects + Cloudflare Images is the only stack today where the entire push pipeline (HTTP intake, queue, rate limiter, storage, dispatch) runs on free-tier primitives at the edge. No cold starts on the hot path. No per-region routing decisions. Just one runtime."
+          />
+          <FaqItem
+            q="What about web push, in-app, email, SMS?"
+            a="Out of scope for now. edgepush is deliberately focused on native iOS and Android push. If you want a multi-channel orchestrator, look at Knock. If you want an alternative for those other channels too, open an issue."
           />
         </div>
       </section>
@@ -330,7 +732,7 @@ export default function Home() {
       </section>
 
       {/* Footer */}
-      <footer className="mx-auto flex max-w-[1440px] flex-col gap-8 border-t border-rule px-6 py-12 font-mono text-[11px] text-muted sm:flex-row sm:items-start sm:justify-between">
+      <footer className="mx-auto grid max-w-[1440px] grid-cols-1 gap-10 border-t border-rule px-6 py-12 font-mono text-[11px] text-muted sm:grid-cols-[1fr_auto_auto_auto]">
         <div className="flex items-start gap-3">
           <LogoMark />
           <div>
@@ -338,27 +740,55 @@ export default function Home() {
             <p className="mt-1">
               &copy; {new Date().getFullYear()} · open source · mit licensed
             </p>
+            <p className="mt-1">v0.1.0 · alpha</p>
           </div>
         </div>
-        <div className="flex flex-wrap gap-6 uppercase tracking-[0.1em]">
-          <Link href="/docs" className="hover:text-text">
-            docs
-          </Link>
-          <Link href="/legal/privacy" className="hover:text-text">
-            privacy
-          </Link>
-          <Link href="/legal/terms" className="hover:text-text">
-            terms
-          </Link>
-          <a
+        <FooterColumn title="product">
+          <FooterLink href="/docs">docs</FooterLink>
+          <FooterLink href="/sign-in">dashboard</FooterLink>
+          <FooterLink
+            href="https://github.com/akshitkrnagpal/edgepush#self-host-on-cloudflare"
+            external
+          >
+            self-host
+          </FooterLink>
+        </FooterColumn>
+        <FooterColumn title="packages">
+          <FooterLink
+            href="https://www.npmjs.com/package/@edgepush/sdk"
+            external
+          >
+            @edgepush/sdk
+          </FooterLink>
+          <FooterLink
+            href="https://www.npmjs.com/package/@edgepush/cli"
+            external
+          >
+            @edgepush/cli
+          </FooterLink>
+          <FooterLink
+            href="https://github.com/akshitkrnagpal/edgepush/releases"
+            external
+          >
+            releases
+          </FooterLink>
+        </FooterColumn>
+        <FooterColumn title="more">
+          <FooterLink
             href="https://github.com/akshitkrnagpal/edgepush"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="hover:text-text"
+            external
           >
             github
-          </a>
-        </div>
+          </FooterLink>
+          <FooterLink
+            href="https://github.com/akshitkrnagpal/edgepush/issues"
+            external
+          >
+            issues
+          </FooterLink>
+          <FooterLink href="/legal/privacy">privacy</FooterLink>
+          <FooterLink href="/legal/terms">terms</FooterLink>
+        </FooterColumn>
       </footer>
     </main>
   );
@@ -371,6 +801,20 @@ function LogoMark() {
       <span className="absolute -left-[2px] -top-[2px] h-[3px] w-[3px] bg-accent" />
       <span className="absolute -right-[2px] -bottom-[2px] h-[3px] w-[3px] bg-accent" />
     </span>
+  );
+}
+
+function GithubMark() {
+  return (
+    <svg
+      width="14"
+      height="14"
+      viewBox="0 0 24 24"
+      fill="currentColor"
+      aria-hidden="true"
+    >
+      <path d="M12 .297c-6.63 0-12 5.373-12 12 0 5.303 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61C4.422 18.07 3.633 17.7 3.633 17.7c-1.087-.744.084-.729.084-.729 1.205.084 1.838 1.236 1.838 1.236 1.07 1.835 2.809 1.305 3.495.998.108-.776.417-1.305.76-1.605-2.665-.3-5.466-1.332-5.466-5.93 0-1.31.465-2.38 1.235-3.22-.135-.303-.54-1.523.105-3.176 0 0 1.005-.322 3.3 1.23.96-.267 1.98-.4 3-.405 1.02.005 2.04.138 3 .405 2.28-1.552 3.285-1.23 3.285-1.23.645 1.653.24 2.873.12 3.176.765.84 1.23 1.91 1.23 3.22 0 4.61-2.805 5.625-5.475 5.92.42.36.81 1.096.81 2.22 0 1.606-.015 2.896-.015 3.286 0 .315.21.69.825.57C20.565 22.092 24 17.592 24 12.297c0-6.627-5.373-12-12-12" />
+    </svg>
   );
 }
 
@@ -438,5 +882,200 @@ function LogLine({
       </span>
       <span className="hidden sm:inline">{meta}</span>
     </div>
+  );
+}
+
+type Tone = "" | "accent" | "text" | "muted" | "muted-strong";
+
+function tone(t: Tone): string {
+  if (t === "accent") return "text-accent";
+  if (t === "text") return "text-text";
+  if (t === "muted") return "text-muted";
+  if (t === "muted-strong") return "text-muted-strong";
+  return "";
+}
+
+function CodePanel({
+  tab,
+  label,
+  lines,
+}: {
+  tab: string;
+  label: React.ReactNode;
+  lines: Array<Array<[Tone, string]>>;
+}) {
+  return (
+    <div className="border border-rule-strong bg-surface font-mono text-[12.5px] leading-[1.65]">
+      <div className="flex items-center justify-between border-b border-rule px-4 py-2.5 text-[11px] uppercase tracking-[0.1em] text-muted">
+        <span>
+          <span className="text-accent">├&nbsp;</span>
+          <span className="text-text">{tab}</span>
+        </span>
+        <span>{label}</span>
+      </div>
+      <pre className="overflow-x-auto p-5 whitespace-pre">
+        <code>
+          {lines.map((line, i) => (
+            <span key={i}>
+              {line.length === 0 ? (
+                "\n"
+              ) : (
+                <>
+                  {line.map(([t, text], j) => (
+                    <span key={j} className={tone(t)}>
+                      {text}
+                    </span>
+                  ))}
+                  {"\n"}
+                </>
+              )}
+            </span>
+          ))}
+        </code>
+      </pre>
+    </div>
+  );
+}
+
+function CompareRow({
+  label,
+  values,
+}: {
+  label: string;
+  values: [string, string, string, string];
+}) {
+  const isYes = (v: string) => v === "yes" || v === "$0" || v === "none";
+  return (
+    <tr className="border-b border-rule last:border-b-0">
+      <td className="px-5 py-3 text-text">{label}</td>
+      {values.map((v, i) => (
+        <td
+          key={i}
+          className={`px-5 py-3 ${
+            i === 0 && isYes(v) ? "text-accent" : "text-muted-strong"
+          }`}
+        >
+          {i === 0 && isYes(v) ? <span className="mr-1">●</span> : null}
+          {v}
+        </td>
+      ))}
+    </tr>
+  );
+}
+
+function PricingCard({
+  tag,
+  title,
+  tagline,
+  body,
+  features,
+  cta,
+}: {
+  tag: string;
+  title: string;
+  tagline: string;
+  body: string;
+  features: string[];
+  cta: { href: string; label: string; external?: boolean };
+}) {
+  const linkClass =
+    "mt-6 inline-flex items-center gap-2 rounded-none bg-text px-5 py-3 font-mono text-[12px] font-semibold text-black hover:bg-accent";
+  return (
+    <div className="flex flex-col border border-rule-strong bg-surface p-8">
+      <div className="mb-4 font-mono text-[11px] uppercase tracking-[0.14em] text-muted">
+        <span className="text-accent">├&nbsp;</span>
+        {tag}
+      </div>
+      <div className="mb-1 flex items-baseline gap-3">
+        <span className="font-mono text-[44px] font-extrabold leading-none text-text">
+          {title}
+        </span>
+        <span className="font-mono text-[12px] text-muted">/ forever</span>
+      </div>
+      <div className="mb-5 font-mono text-[11px] uppercase tracking-[0.12em] text-muted">
+        {tagline}
+      </div>
+      <p className="mb-6 max-w-md font-sans text-[14px] leading-[1.6] text-muted-strong">
+        {body}
+      </p>
+      <ul className="mb-2 space-y-2 font-mono text-[12px] text-muted-strong">
+        {features.map((f) => (
+          <li key={f}>
+            <span className="text-accent">●</span> {f}
+          </li>
+        ))}
+      </ul>
+      {cta.external ? (
+        <a
+          href={cta.href}
+          target="_blank"
+          rel="noopener noreferrer"
+          className={linkClass}
+        >
+          {cta.label}
+        </a>
+      ) : (
+        <Link href={cta.href} className={linkClass}>
+          {cta.label}
+        </Link>
+      )}
+    </div>
+  );
+}
+
+function FaqItem({ q, a }: { q: string; a: string }) {
+  return (
+    <div>
+      <h3 className="mb-2 font-mono text-[14px] font-bold text-text">
+        <span className="text-accent">?&nbsp;</span>
+        {q}
+      </h3>
+      <p className="font-sans text-[14px] leading-[1.6] text-muted-strong">
+        {a}
+      </p>
+    </div>
+  );
+}
+
+function FooterColumn({
+  title,
+  children,
+}: {
+  title: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="flex flex-col gap-2">
+      <p className="mb-1 uppercase tracking-[0.12em] text-text">{title}</p>
+      {children}
+    </div>
+  );
+}
+
+function FooterLink({
+  href,
+  external,
+  children,
+}: {
+  href: string;
+  external?: boolean;
+  children: React.ReactNode;
+}) {
+  if (external) {
+    return (
+      <a
+        href={href}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="hover:text-text"
+      >
+        {children}
+      </a>
+    );
+  }
+  return (
+    <Link href={href} className="hover:text-text">
+      {children}
+    </Link>
   );
 }
