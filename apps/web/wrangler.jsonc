@@ -5,6 +5,12 @@
   "compatibility_date": "2026-04-10",
   "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
   "workers_dev": true,
+  // Run the OpenNext build before every `wrangler deploy`. Cloudflare
+  // Workers Builds calls `npx wrangler deploy` directly with no separate
+  // build step, so the build has to be wired in here.
+  "build": {
+    "command": "npx opennextjs-cloudflare build"
+  },
   // Dashboard owns the apex via custom domain (auto-creates DNS).
   // API lives at api.edgepush.dev as a separate worker.
   "routes": [
