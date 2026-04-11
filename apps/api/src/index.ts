@@ -1,12 +1,14 @@
 import { Hono } from "hono";
 import { cors } from "hono/cors";
 
+import { handleScheduled } from "./cron";
 import { createDb } from "./db";
-import { handleQueue } from "./dispatch";
+import { handleDlq, handleQueue } from "./dispatch";
 import { createAuth } from "./lib/better-auth";
 import { dashboardRouter } from "./routes/dashboard";
 import { receiptsRouter } from "./routes/receipts";
 import { sendRouter } from "./routes/send";
+import { stripeWebhookRouter } from "./routes/webhooks/stripe";
 import type { AppContext, DispatchJob, Env } from "./types";
 
 export { RateLimiter } from "./rate-limiter";
@@ -60,9 +62,29 @@ app.route("/api/dashboard", dashboardRouter);
 app.route("/v1", sendRouter);
 app.route("/v1", receiptsRouter);
 
+// Stripe webhook endpoint — public (signature-verified internally).
+// Mounted under /v1 so it lives next to the other public routes.
+app.route("/v1", stripeWebhookRouter);
+
 export default {
   fetch: app.fetch,
   async queue(batch: MessageBatch<DispatchJob>, env: Env): Promise<void> {
+    // Workers dispatches all queue consumers through a single queue()
+    // export, keyed on `batch.queue`. We branch by queue name so the
+    // dead-letter queue can have its own handler (observability-only:
+    // logs every dead-letter to worker_errors and acks) without a
+    // second worker.
+    if (batch.queue === "edgepush-dispatch-dlq") {
+      await handleDlq(batch, env);
+      return;
+    }
     await handleQueue(batch, env);
+  },
+  async scheduled(
+    event: ScheduledEvent,
+    env: Env,
+    ctx: ExecutionContext,
+  ): Promise<void> {
+    ctx.waitUntil(handleScheduled(event, env));
   },
 };

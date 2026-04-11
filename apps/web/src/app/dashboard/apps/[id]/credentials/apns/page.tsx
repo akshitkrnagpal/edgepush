@@ -14,7 +14,6 @@ export default function ApnsCredentialsPage(props: {
   const uploadApns = useUploadApns(id);
   const [keyId, setKeyId] = useState("");
   const [teamId, setTeamId] = useState("");
-  const [bundleId, setBundleId] = useState("");
   const [privateKey, setPrivateKey] = useState("");
   const [production, setProduction] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -26,7 +25,6 @@ export default function ApnsCredentialsPage(props: {
       await uploadApns.mutateAsync({
         keyId,
         teamId,
-        bundleId,
         privateKey,
         production,
       });
@@ -83,12 +81,10 @@ export default function ApnsCredentialsPage(props: {
             onChange={setTeamId}
             placeholder="DEF2345678"
           />
-          <Field
-            label="bundle_id"
-            value={bundleId}
-            onChange={setBundleId}
-            placeholder="io.acme.myapp"
-          />
+          <p className="font-mono text-[11px] tracking-[0.02em] text-muted">
+            <span className="text-accent">●</span> bundle_id is derived from
+            this app&apos;s package_name — no need to type it.
+          </p>
           <div>
             <label className="mb-2 block font-mono text-[10px] uppercase tracking-[0.12em] text-muted">
               p8_private_key

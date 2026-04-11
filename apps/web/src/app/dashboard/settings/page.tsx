@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 
 import { authClient } from "@/lib/auth-client";
+import { useDeleteAccount } from "@/lib/queries";
 
 export default function SettingsPage() {
   const router = useRouter();
@@ -13,6 +14,13 @@ export default function SettingsPage() {
 
   const [profileStatus, setProfileStatus] = useState<string | null>(null);
   const [deleteStatus, setDeleteStatus] = useState<string | null>(null);
+
+  // Delete-account two-step confirmation state.
+  // Stage 1: initial "delete_account" button revealed.
+  // Stage 2: email-typing confirmation form.
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [deleteConfirmEmail, setDeleteConfirmEmail] = useState("");
+  const deleteAccount = useDeleteAccount();
 
   async function handleUpdateProfile(e: React.FormEvent) {
     e.preventDefault();
@@ -31,21 +39,20 @@ export default function SettingsPage() {
     }
   }
 
-  async function handleDeleteAccount() {
-    if (
-      !confirm(
-        "Are you sure? This deletes your account, all apps, credentials, and messages. This cannot be undone.",
-      )
-    ) {
+  async function handleDeleteAccount(e: React.FormEvent) {
+    e.preventDefault();
+    if (!session) return;
+    if (deleteConfirmEmail !== session.user.email) {
+      setDeleteStatus("Error: email does not match");
       return;
     }
     setDeleteStatus(null);
     try {
-      const result = await authClient.deleteUser({});
-      if (result.error) {
-        setDeleteStatus(`Error: ${result.error.message ?? "failed"}`);
-        return;
-      }
+      await deleteAccount.mutateAsync(session.user.email);
+      // Best-effort sign-out on the Better Auth side too — the user
+      // row was already deleted from the edgepush DB, so this is just
+      // session cookie cleanup.
+      await authClient.signOut().catch(() => {});
       router.replace("/");
     } catch (err) {
       setDeleteStatus(
@@ -104,30 +111,82 @@ export default function SettingsPage() {
         </form>
       </section>
 
-      <section className="border border-error bg-surface">
+      <section className="mt-20 border border-accent bg-surface">
         <div className="flex items-center justify-between border-b border-rule px-5 py-3 font-mono text-[11px] uppercase tracking-[0.12em] text-muted">
           <span>
-            <span className="text-error">├&nbsp;</span>
-            <span className="text-error">danger_zone</span>
+            <span className="text-accent">├&nbsp;</span>
+            <span className="text-accent">danger_zone</span>
           </span>
-          <span className="text-error">● irreversible</span>
+          <span className="text-accent">● irreversible</span>
         </div>
         <div className="space-y-4 px-6 py-6">
           <p className="font-sans text-[14px] leading-[1.55] text-muted-strong">
-            Permanently delete your account and all associated apps,
-            credentials, and messages. This cannot be undone.
+            Permanently delete your account and every app, credential,
+            message, webhook, and subscription tied to it. This cannot be
+            undone and the data cannot be recovered.
           </p>
-          {deleteStatus && (
-            <p className="font-mono text-[12px] text-error">
-              <span>●</span> {deleteStatus}
-            </p>
+
+          {!deleteConfirmOpen && (
+            <button
+              onClick={() => {
+                setDeleteStatus(null);
+                setDeleteConfirmOpen(true);
+              }}
+              className="inline-flex items-center gap-2 rounded-none bg-accent px-4 py-2.5 font-mono text-[12px] font-semibold text-black hover:bg-accent-hover"
+            >
+              <span>$</span> delete_account
+            </button>
           )}
-          <button
-            onClick={handleDeleteAccount}
-            className="inline-flex items-center gap-2 rounded-none border border-error px-4 py-2.5 font-mono text-[12px] font-semibold text-error hover:bg-error/10"
-          >
-            <span>●</span> delete_account
-          </button>
+
+          {deleteConfirmOpen && (
+            <form onSubmit={handleDeleteAccount} className="space-y-4">
+              <div>
+                <label className="mb-2 block font-mono text-[10px] uppercase tracking-[0.12em] text-muted">
+                  type your email to confirm ({session.user.email})
+                </label>
+                <input
+                  type="email"
+                  autoFocus
+                  required
+                  value={deleteConfirmEmail}
+                  onChange={(e) => setDeleteConfirmEmail(e.target.value)}
+                  placeholder={session.user.email}
+                  className="w-full rounded-none border border-rule-strong bg-bg px-4 py-2.5 font-mono text-[13px] text-text placeholder:text-muted focus:border-accent focus:outline-none"
+                />
+              </div>
+              {deleteStatus && (
+                <p className="font-mono text-[12px] text-accent">
+                  <span>●</span> {deleteStatus}
+                </p>
+              )}
+              <div className="flex items-center gap-3">
+                <button
+                  type="submit"
+                  disabled={
+                    deleteAccount.isPending ||
+                    deleteConfirmEmail !== session.user.email
+                  }
+                  className="inline-flex items-center gap-2 rounded-none bg-accent px-4 py-2.5 font-mono text-[12px] font-semibold text-black hover:bg-accent-hover disabled:opacity-40"
+                >
+                  <span>$</span>{" "}
+                  {deleteAccount.isPending
+                    ? "deleting…"
+                    : "confirm_delete"}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setDeleteConfirmOpen(false);
+                    setDeleteConfirmEmail("");
+                    setDeleteStatus(null);
+                  }}
+                  className="font-mono text-[12px] uppercase tracking-[0.1em] text-muted hover:text-text"
+                >
+                  cancel
+                </button>
+              </div>
+            </form>
+          )}
         </div>
       </section>
     </div>

@@ -18,6 +18,31 @@ export interface Env {
 
   RESEND_API_KEY?: string;
   EMAIL_FROM?: string;
+  /**
+   * Destination for the daily operator digest email. Optional —
+   * if unset, the digest cron logs to console.warn and skips sending.
+   */
+  OPERATOR_EMAIL?: string;
+
+  /**
+   * Hosted vs self-host mode gate. Set to "true" on edgepush.dev.
+   * Self-hosters leave it unset or "false".
+   *
+   * When "true": plan/quota/retention checks are enforced.
+   * When "false": all gates bypass, unlimited apps/events/retention.
+   *
+   * Read via isHosted(env) from lib/mode.ts — never compare the string directly.
+   */
+  HOSTED_MODE?: string;
+
+  // Stripe billing (hosted tier only). All optional — self-host leaves
+  // them unset and the billing endpoints return 501 gracefully.
+  STRIPE_SECRET_KEY?: string;
+  STRIPE_WEBHOOK_SECRET?: string;
+  /** HMAC key used to sign client_reference_id in Checkout sessions. */
+  STRIPE_REF_HMAC_KEY?: string;
+  /** Stripe Price ID for the Pro tier ($29/mo). */
+  STRIPE_PRO_PRICE_ID?: string;
 }
 
 export interface AppContext {

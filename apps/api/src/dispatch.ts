@@ -18,11 +18,13 @@ import type { PushMessage } from "@edgepush/shared";
 import { createDb } from "./db";
 import {
   apnsCredentials,
+  apps,
   fcmCredentials,
   messages,
   webhooks,
 } from "./db/schema";
 import { decryptCredential } from "./lib/crypto";
+import { logWorkerError } from "./lib/observability";
 import { dispatchWebhook, type WebhookPayload } from "./lib/webhook";
 import { dispatchApns } from "./push/apns";
 import { dispatchFcm } from "./push/fcm";
@@ -132,6 +134,27 @@ async function processAppBatch(
       })
       .where(eq(messages.id, row.id));
 
+    // Shadow-log the failure for operator visibility. Does NOT change
+    // retry semantics — the message has already been marked failed and
+    // the queue will not re-dispatch. This exists so the daily digest
+    // cron can surface patterns (many fails on one app, one device
+    // token repeatedly invalid, etc.) that console.error would lose.
+    //
+    // Transient/token-invalid errors are noisy and expected, so we
+    // only log the definitively-failed case where tokenInvalid is
+    // false — those are the ones that hint at operator-level problems.
+    if (!result.ok && !result.tokenInvalid) {
+      await logWorkerError(db, {
+        kind: "dispatch",
+        payload: {
+          appId,
+          messageId: row.id,
+          platform: row.platform,
+          error: result.error ?? "unknown",
+        },
+      });
+    }
+
     // Fire webhook if configured and enabled
     if (webhook?.enabled) {
       const payload: WebhookPayload = {
@@ -159,9 +182,20 @@ async function loadApnsCredentials(
   env: Env,
   appId: string,
 ) {
+  // bundleId is derived from apps.packageName, not from the (deprecated)
+  // apns_credentials.bundle_id column. This is the post-normalization
+  // read path — one source of truth.
   const row = await db
-    .select()
+    .select({
+      keyId: apnsCredentials.keyId,
+      teamId: apnsCredentials.teamId,
+      privateKeyCiphertext: apnsCredentials.privateKeyCiphertext,
+      privateKeyNonce: apnsCredentials.privateKeyNonce,
+      production: apnsCredentials.production,
+      bundleId: apps.packageName,
+    })
     .from(apnsCredentials)
+    .innerJoin(apps, eq(apps.id, apnsCredentials.appId))
     .where(eq(apnsCredentials.appId, appId))
     .limit(1)
     .then((rows) => rows[0] ?? null);
@@ -209,4 +243,42 @@ async function loadFcmCredentials(
     projectId: row.projectId,
     serviceAccountJson,
   };
+}
+
+/**
+ * Dead-letter queue consumer.
+ *
+ * Cloudflare Queues retries a message `max_retries` times before sending
+ * it to the dead-letter queue configured on the main consumer. This
+ * handler picks those up, logs each one to `worker_errors` so the
+ * daily operator digest will surface them, and acks so the DLQ drains.
+ *
+ * We deliberately DO NOT re-run dispatch logic here. A message that
+ * failed 3 consecutive retries against a healthy provider is telling
+ * us something structural (bad creds, bad payload, bad token) and
+ * operator intervention is the right response. The replay-dlq.ts
+ * operator script exists for the rare case where a transient outage
+ * buried good messages.
+ */
+export async function handleDlq(
+  batch: MessageBatch<DispatchJob>,
+  env: Env,
+): Promise<void> {
+  const db = createDb(env.DB);
+
+  for (const msg of batch.messages) {
+    await logWorkerError(db, {
+      kind: "dlq",
+      payload: {
+        appId: msg.body.appId,
+        messageId: msg.body.messageId,
+        attempts: msg.attempts,
+        timestamp: msg.timestamp.getTime(),
+      },
+    });
+    // Ack regardless — the DLQ is observability-only. If logging
+    // failed, logWorkerError already swallowed the error. Retrying a
+    // dead-letter just loops forever.
+    msg.ack();
+  }
 }

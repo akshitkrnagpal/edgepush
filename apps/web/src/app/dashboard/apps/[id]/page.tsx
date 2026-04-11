@@ -1,6 +1,6 @@
 "use client";
 
-import { use, useState } from "react";
+import { use, useRef, useState } from "react";
 import Link from "next/link";
 
 import { useToast } from "@/components/toast";
@@ -8,9 +8,58 @@ import {
   useApiKeys,
   useCreateApiKey,
   useCredentials,
+  useDeliveries,
   useMetrics,
   useRevokeApiKey,
 } from "@/lib/queries";
+
+type DeliveryStatus =
+  | "all"
+  | "queued"
+  | "sending"
+  | "delivered"
+  | "failed"
+  | "expired";
+
+type CredentialHealth =
+  | { state: "never_probed" }
+  | { state: "ok"; checkedAt: number }
+  | { state: "broken"; checkedAt: number; error: string }
+  | { state: "topic_mismatch"; checkedAt: number; error: string };
+
+function deriveHealth(row: {
+  lastCheckedAt: number | null;
+  lastCheckOk: boolean | null;
+  lastCheckError: string | null;
+} | null | undefined): CredentialHealth {
+  if (!row || row.lastCheckedAt == null || row.lastCheckOk == null) {
+    return { state: "never_probed" };
+  }
+  if (row.lastCheckOk) {
+    return { state: "ok", checkedAt: row.lastCheckedAt };
+  }
+  // Topic mismatch is stored in lastCheckError text by the probe.
+  // We detect it so we can render it with warning color instead of
+  // accent (broken) color — it's a config issue, not a creds issue.
+  const err = row.lastCheckError ?? "credential broken";
+  if (err.toLowerCase().includes("topic")) {
+    return { state: "topic_mismatch", checkedAt: row.lastCheckedAt, error: err };
+  }
+  return { state: "broken", checkedAt: row.lastCheckedAt, error: err };
+}
+
+function relativeTime(ts: number): string {
+  const delta = Date.now() - ts;
+  if (delta < 0) return "just now";
+  const s = Math.floor(delta / 1000);
+  if (s < 60) return `${s}s ago`;
+  const m = Math.floor(s / 60);
+  if (m < 60) return `${m}m ago`;
+  const h = Math.floor(m / 60);
+  if (h < 24) return `${h}h ago`;
+  const d = Math.floor(h / 24);
+  return `${d}d ago`;
+}
 
 export default function AppDetailPage(props: {
   params: Promise<{ id: string }>;
@@ -23,6 +72,9 @@ export default function AppDetailPage(props: {
   const createApiKey = useCreateApiKey(id);
   const revokeApiKey = useRevokeApiKey(id);
   const [newKey, setNewKey] = useState<string | null>(null);
+  const [deliveryFilter, setDeliveryFilter] = useState<DeliveryStatus>("all");
+  const deliveries = useDeliveries(id, deliveryFilter);
+  const deliveriesRef = useRef<HTMLElement>(null);
 
   const loading =
     apiKeys.isLoading || credentials.isLoading || metrics.isLoading;
@@ -87,7 +139,20 @@ export default function AppDetailPage(props: {
                 <span>$</span> copy
               </button>
               <button
-                onClick={() => setNewKey(null)}
+                onClick={() => {
+                  setNewKey(null);
+                  // After the user copies their first API key, bring the
+                  // Recent deliveries panel into view so their first send
+                  // is already in frame — zero clicks to "holy shit it
+                  // works." Single trigger: we set newKey back to null
+                  // above, so dismissing again later does nothing.
+                  requestAnimationFrame(() => {
+                    deliveriesRef.current?.scrollIntoView({
+                      behavior: "smooth",
+                      block: "start",
+                    });
+                  });
+                }}
                 className="font-mono text-[12px] uppercase tracking-[0.1em] text-muted hover:text-text"
               >
                 dismiss
@@ -189,6 +254,28 @@ export default function AppDetailPage(props: {
             )}
           </section>
 
+          {(credentials.data?.apns || credentials.data?.fcm) && (
+            <section className="mb-12">
+              <SectionLabel>credential_health</SectionLabel>
+              <div className="border border-rule-strong bg-surface">
+                {credentials.data?.apns && (
+                  <HealthRow
+                    platform="apns"
+                    health={deriveHealth(credentials.data.apns)}
+                    last={!credentials.data?.fcm}
+                  />
+                )}
+                {credentials.data?.fcm && (
+                  <HealthRow
+                    platform="fcm"
+                    health={deriveHealth(credentials.data.fcm)}
+                    last
+                  />
+                )}
+              </div>
+            </section>
+          )}
+
           <section className="mb-12">
             <SectionLabel>credentials</SectionLabel>
             <div className="grid grid-cols-1 gap-0 border border-rule-strong md:grid-cols-2">
@@ -214,6 +301,89 @@ export default function AppDetailPage(props: {
                 last
               />
             </div>
+          </section>
+
+          <section ref={deliveriesRef} className="mb-12">
+            <div className="mb-4 flex items-center justify-between gap-4">
+              <SectionLabel>recent_deliveries</SectionLabel>
+              <StatusFilter
+                value={deliveryFilter}
+                onChange={setDeliveryFilter}
+              />
+            </div>
+            {deliveries.isLoading && (
+              <div className="border border-rule-strong bg-surface">
+                {[0, 1, 2, 3, 4].map((i) => (
+                  <div
+                    key={i}
+                    className="flex items-center gap-4 border-b border-rule px-5 py-3 font-mono text-[11px] text-muted last:border-b-0"
+                  >
+                    <span className="animate-pulse">○ loading…</span>
+                  </div>
+                ))}
+              </div>
+            )}
+            {!deliveries.isLoading &&
+              (!deliveries.data || deliveries.data.items.length === 0) && (
+                <div className="border border-dashed border-rule-strong px-6 py-10 text-center">
+                  <div className="font-mono text-[11px] uppercase tracking-[0.12em] text-muted">
+                    <span className="text-muted">○</span> no deliveries yet
+                  </div>
+                  <div className="mt-3 inline-block border border-rule-strong bg-bg px-4 py-2 font-mono text-[12px] text-text">
+                    <span className="text-accent">$ </span>
+                    edgepush.send()
+                  </div>
+                  <p className="mt-4 font-sans text-[13px] text-muted-strong">
+                    copy the example from your api key and send your first
+                    push — it&apos;ll land here
+                  </p>
+                </div>
+              )}
+            {!deliveries.isLoading &&
+              deliveries.data &&
+              deliveries.data.items.length > 0 && (
+                <div className="overflow-x-auto border border-rule-strong bg-surface">
+                  <table className="w-full font-mono text-[12px]">
+                    <thead>
+                      <tr className="border-b border-rule bg-[#050505] text-left text-[10px] uppercase tracking-[0.12em] text-muted">
+                        <th className="px-4 py-3 font-medium">time</th>
+                        <th className="px-4 py-3 font-medium">id</th>
+                        <th className="px-4 py-3 font-medium">to</th>
+                        <th className="px-4 py-3 font-medium">platform</th>
+                        <th className="px-4 py-3 font-medium">status</th>
+                        <th className="px-4 py-3 font-medium">error</th>
+                      </tr>
+                    </thead>
+                    <tbody className="tnum">
+                      {deliveries.data.items.map((item) => (
+                        <tr
+                          key={item.id}
+                          className="border-b border-rule last:border-b-0"
+                        >
+                          <td className="whitespace-nowrap px-4 py-2.5 text-muted">
+                            {relativeTime(item.createdAt)}
+                          </td>
+                          <td className="whitespace-nowrap px-4 py-2.5 text-muted">
+                            {item.id.slice(0, 8)}
+                          </td>
+                          <td className="whitespace-nowrap px-4 py-2.5 text-text">
+                            {item.to.slice(0, 12)}…
+                          </td>
+                          <td className="whitespace-nowrap px-4 py-2.5 text-muted">
+                            {item.platform}
+                          </td>
+                          <td className="whitespace-nowrap px-4 py-2.5">
+                            <StatusDot status={item.status} />
+                          </td>
+                          <td className="px-4 py-2.5 text-muted-strong">
+                            {item.error ? item.error.slice(0, 60) : ""}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
           </section>
 
           <section className="flex flex-wrap items-center gap-3">
@@ -258,6 +428,133 @@ function DashLink({
     >
       {children} <span className="text-muted">─&gt;</span>
     </Link>
+  );
+}
+
+function HealthRow({
+  platform,
+  health,
+  last,
+}: {
+  platform: "apns" | "fcm";
+  health: CredentialHealth;
+  last: boolean;
+}) {
+  const label = platform === "apns" ? "apns (ios)" : "fcm (android)";
+
+  let dot: string;
+  let dotClass: string;
+  let statusLabel: string;
+  let detail: string;
+  let timeStr: string = "";
+
+  if (health.state === "never_probed") {
+    dot = "○";
+    dotClass = "text-muted";
+    statusLabel = "never probed";
+    detail = "first check will run within the hour";
+  } else if (health.state === "ok") {
+    dot = "●";
+    dotClass = "text-success";
+    statusLabel = "ok";
+    detail = "responding to probes";
+    timeStr = `last check ${relativeTime(health.checkedAt)}`;
+  } else if (health.state === "topic_mismatch") {
+    dot = "●";
+    dotClass = "text-warning";
+    statusLabel = "topic mismatch";
+    detail = health.error;
+    timeStr = `last check ${relativeTime(health.checkedAt)}`;
+  } else {
+    dot = "●";
+    dotClass = "text-accent";
+    statusLabel = "broken";
+    detail = health.error;
+    timeStr = `last check ${relativeTime(health.checkedAt)}`;
+  }
+
+  return (
+    <div
+      className={`flex items-start justify-between gap-4 px-5 py-4 ${
+        !last ? "border-b border-rule" : ""
+      }`}
+    >
+      <div className="flex-1">
+        <div className="flex items-baseline gap-3">
+          <span className="font-mono text-[13px] font-bold text-text">
+            <span className="text-accent">├&nbsp;</span>
+            {label}
+          </span>
+          <span
+            className={`font-mono text-[10px] uppercase tracking-[0.12em] ${dotClass}`}
+          >
+            {dot} {statusLabel}
+          </span>
+        </div>
+        <p className="mt-1 pl-4 font-sans text-[13px] leading-[1.5] text-muted-strong">
+          {detail}
+        </p>
+      </div>
+      {timeStr && (
+        <span className="shrink-0 pt-0.5 font-mono tnum text-[10px] uppercase tracking-[0.12em] text-muted">
+          {timeStr}
+        </span>
+      )}
+    </div>
+  );
+}
+
+const STATUS_FILTER_OPTIONS: { value: DeliveryStatus; label: string }[] = [
+  { value: "all", label: "all" },
+  { value: "delivered", label: "● delivered" },
+  { value: "failed", label: "● failed" },
+  { value: "queued", label: "○ queued" },
+];
+
+function StatusFilter({
+  value,
+  onChange,
+}: {
+  value: DeliveryStatus;
+  onChange: (v: DeliveryStatus) => void;
+}) {
+  return (
+    <div className="flex items-center gap-1 border border-rule-strong bg-surface px-1 py-1">
+      {STATUS_FILTER_OPTIONS.map((opt) => (
+        <button
+          key={opt.value}
+          onClick={() => onChange(opt.value)}
+          className={`px-2 py-1 font-mono text-[10px] uppercase tracking-[0.12em] ${
+            value === opt.value
+              ? "bg-rule-strong text-text"
+              : "text-muted hover:text-text"
+          }`}
+        >
+          {opt.label}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+function StatusDot({ status }: { status: string }) {
+  let dot = "●";
+  let color = "text-muted-strong";
+  let label = status;
+  if (status === "delivered") {
+    color = "text-success";
+  } else if (status === "failed" || status === "expired") {
+    color = "text-error";
+  } else if (status === "queued") {
+    dot = "○";
+    color = "text-muted";
+  } else if (status === "sending") {
+    color = "text-warning";
+  }
+  return (
+    <span className={`font-mono uppercase tracking-[0.12em] ${color}`}>
+      {dot} {label}
+    </span>
   );
 }
 

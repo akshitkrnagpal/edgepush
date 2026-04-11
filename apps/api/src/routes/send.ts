@@ -17,13 +17,50 @@ import { Hono } from "hono";
 import { SendRequestSchema, type SendResponseItem } from "@edgepush/shared";
 import { authenticateApiKey } from "../lib/auth";
 import { generateId } from "../lib/crypto";
+import { reserveMonthlyUsage } from "../lib/plan";
 import type { RateLimiter } from "../rate-limiter";
 import type { AppContext } from "../types";
 import { messages } from "../db/schema";
 
+/**
+ * Kill switch KV key. If this key is set to ANY non-empty value, the
+ * send handler returns 503 immediately — before auth, before any DB
+ * read, before any downstream work. The operator can flip it in one
+ * command:
+ *
+ *   wrangler kv:key put --binding=CACHE edgepush:killswitch:send "maintenance"
+ *
+ * And clear it just as fast:
+ *
+ *   wrangler kv:key delete --binding=CACHE edgepush:killswitch:send
+ *
+ * Intended for incident response — e.g., a bad deploy is corrupting
+ * messages rows, pull the cord, ship the fix, release the cord. We
+ * check KV on every request because KV reads from the nearest edge
+ * cache are sub-millisecond; adding ~1ms of latency on the send path
+ * is an acceptable price for a panic button.
+ */
+const KILLSWITCH_SEND_KEY = "edgepush:killswitch:send";
+
 export const sendRouter = new Hono<AppContext>();
 
 sendRouter.post("/send", async (c) => {
+  // Kill switch check — first thing, before auth or anything that
+  // might hit D1. Non-null value = send is disabled.
+  const killswitch = await c.env.CACHE.get(KILLSWITCH_SEND_KEY);
+  if (killswitch) {
+    return c.json(
+      {
+        error: "maintenance",
+        detail: killswitch,
+      },
+      503,
+      {
+        "retry-after": "60",
+      },
+    );
+  }
+
   const authedApp = await authenticateApiKey(
     c.var.db,
     c.req.header("authorization") ?? null,
@@ -31,12 +68,6 @@ sendRouter.post("/send", async (c) => {
   if (!authedApp) {
     return c.json({ error: "invalid_api_key" }, 401);
   }
-
-  // Rate limit by app
-  const limiterId = c.env.RATE_LIMITER.idFromName(authedApp.appId);
-  const limiter = c.env.RATE_LIMITER.get(
-    limiterId,
-  ) as unknown as DurableObjectStub<RateLimiter>;
 
   const parseResult = SendRequestSchema.safeParse(await c.req.json());
   if (!parseResult.success) {
@@ -47,11 +78,49 @@ sendRouter.post("/send", async (c) => {
   }
   const { messages: msgs } = parseResult.data;
 
+  // Per-app burst rate limit via Durable Object. Cheap, reversible.
+  // Runs before the monthly quota so rate-limited requests don't eat
+  // billable events — a rate-limited send is a retry-later, not a
+  // consumed event.
+  const limiterId = c.env.RATE_LIMITER.idFromName(authedApp.appId);
+  const limiter = c.env.RATE_LIMITER.get(
+    limiterId,
+  ) as unknown as DurableObjectStub<RateLimiter>;
+
   const rateLimit = await limiter.take(msgs.length);
   if (!rateLimit.allowed) {
     return c.json(
       { error: "rate_limited", retry_after_ms: rateLimit.retryAfterMs },
       429,
+    );
+  }
+
+  // Monthly quota check (hosted mode only). Atomic reservation — if we
+  // can't fit `msgs.length` new events under the plan limit, reject the
+  // entire batch. All-or-nothing semantics so the caller doesn't have
+  // to track partial success. Self-host bypasses entirely.
+  const quota = await reserveMonthlyUsage(
+    c.env,
+    c.var.db,
+    authedApp.userId,
+    msgs.length,
+  );
+  if (!quota.ok) {
+    return c.json(
+      {
+        error: "quota_exceeded",
+        plan: quota.plan,
+        limit: quota.limit,
+        used: quota.used,
+        year_month: quota.yearMonth,
+        detail: `monthly send limit for plan "${quota.plan}" is ${quota.limit} events and you have already used ${quota.used}. upgrade at /pricing to raise your cap.`,
+      },
+      429,
+      {
+        "x-ratelimit-limit": String(quota.limit),
+        "x-ratelimit-used": String(quota.used),
+        "x-ratelimit-scope": "monthly",
+      },
     );
   }
 

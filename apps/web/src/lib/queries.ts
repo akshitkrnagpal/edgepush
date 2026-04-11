@@ -22,6 +22,9 @@ export const queryKeys = {
   messages: (appId: string) => ["apps", appId, "messages"] as const,
   webhook: (appId: string) => ["apps", appId, "webhook"] as const,
   audit: (appId: string) => ["apps", appId, "audit"] as const,
+  deliveries: (appId: string, status: string) =>
+    ["apps", appId, "deliveries", status] as const,
+  subscription: () => ["billing", "subscription"] as const,
 };
 
 // --- Apps ---
@@ -98,7 +101,6 @@ export function useUploadApns(appId: string) {
     mutationFn: (body: {
       keyId: string;
       teamId: string;
-      bundleId: string;
       privateKey: string;
       production: boolean;
     }) => api.uploadApns(appId, body),
@@ -187,5 +189,37 @@ export function useAuditLog(appId: string) {
   return useQuery({
     queryKey: queryKeys.audit(appId),
     queryFn: () => api.listAuditLog(appId).then((r) => r.data),
+  });
+}
+
+// --- Deliveries (paginated, filterable) ---
+
+export function useDeliveries(appId: string, status: string) {
+  return useQuery({
+    queryKey: queryKeys.deliveries(appId, status),
+    queryFn: () => api.getDeliveries(appId, { status, limit: 50 }),
+  });
+}
+
+// --- Billing ---
+
+export function useSubscription() {
+  return useQuery({
+    queryKey: queryKeys.subscription(),
+    queryFn: () => api.getSubscription(),
+  });
+}
+
+export function useCreateCheckout() {
+  return useMutation({
+    mutationFn: () => api.createCheckout(),
+  });
+}
+
+// --- Account ---
+
+export function useDeleteAccount() {
+  return useMutation({
+    mutationFn: (confirmEmail: string) => api.deleteAccount(confirmEmail),
   });
 }

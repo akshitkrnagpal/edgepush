@@ -16,7 +16,11 @@
   // Environment variables set via `wrangler secret put`
   "vars": {
     "BETTER_AUTH_URL": "https://api.edgepush.dev",
-    "DASHBOARD_URL": "https://edgepush.dev"
+    "DASHBOARD_URL": "https://edgepush.dev",
+    // Hosted vs self-host gate. "true" on edgepush.dev; self-hosters leave
+    // this unset or "false" to get unlimited apps/events/retention. See
+    // src/lib/mode.ts for the isHosted() helper and its call sites.
+    "HOSTED_MODE": "false"
   },
 
   // D1 database for tenants, apps, tokens, receipts, push credentials
@@ -37,7 +41,10 @@
     }
   ],
 
-  // Queues for async push dispatch with retries
+  // Queues for async push dispatch with retries.
+  // The DLQ has its own consumer: every dead-lettered message gets
+  // logged to the `worker_errors` table so the daily operator digest
+  // cron can surface it. See src/index.ts queue() dispatch table.
   "queues": {
     "producers": [
       {
@@ -52,6 +59,12 @@
         "max_batch_timeout": 5,
         "max_retries": 3,
         "dead_letter_queue": "edgepush-dispatch-dlq"
+      },
+      {
+        "queue": "edgepush-dispatch-dlq",
+        "max_batch_size": 50,
+        "max_batch_timeout": 30,
+        "max_retries": 1
       }
     ]
   },
@@ -71,5 +84,16 @@
       "tag": "v1",
       "new_sqlite_classes": ["RateLimiter"]
     }
-  ]
+  ],
+
+  // Scheduled handlers. See src/cron.ts for the dispatch table.
+  //   "0 * * * *"  — hourly credential health probe
+  //   "0 3 * * *"  — daily 03:00 UTC operator digest (worker_errors
+  //                  aggregation + D1 size check)
+  "triggers": {
+    "crons": [
+      "0 * * * *",
+      "0 3 * * *"
+    ]
+  }
 }

@@ -75,10 +75,16 @@ export const api = {
         bundleId: string;
         production: boolean;
         updatedAt: number;
+        lastCheckedAt: number | null;
+        lastCheckOk: boolean | null;
+        lastCheckError: string | null;
       } | null;
       fcm: {
         projectId: string;
         updatedAt: number;
+        lastCheckedAt: number | null;
+        lastCheckOk: boolean | null;
+        lastCheckError: string | null;
       } | null;
     }>(`/api/dashboard/apps/${appId}/credentials`),
   uploadApns: (
@@ -86,7 +92,6 @@ export const api = {
     body: {
       keyId: string;
       teamId: string;
-      bundleId: string;
       privateKey: string;
       production: boolean;
     },
@@ -169,4 +174,44 @@ export const api = {
         createdAt: number;
       }>;
     }>(`/api/dashboard/apps/${appId}/audit`),
+  getDeliveries: (
+    appId: string,
+    opts: { status?: string; cursor?: string; limit?: number } = {},
+  ) => {
+    const params = new URLSearchParams();
+    if (opts.status && opts.status !== "all") params.set("status", opts.status);
+    if (opts.cursor) params.set("cursor", opts.cursor);
+    if (opts.limit) params.set("limit", String(opts.limit));
+    const q = params.toString();
+    return request<{
+      items: Array<{
+        id: string;
+        to: string;
+        platform: "ios" | "android";
+        status: string;
+        error: string | null;
+        tokenInvalid: boolean;
+        createdAt: number;
+        updatedAt: number;
+      }>;
+      nextCursor: string | null;
+    }>(
+      `/api/dashboard/apps/${appId}/deliveries${q ? `?${q}` : ""}`,
+    );
+  },
+  getSubscription: () =>
+    request<{
+      plan: "free" | "pro" | "enterprise" | "selfhost";
+      status: "active" | "past_due" | "canceled";
+      currentPeriodEnd: number | null;
+    }>("/api/dashboard/billing/subscription"),
+  createCheckout: () =>
+    request<{ url: string }>("/api/dashboard/billing/checkout", {
+      method: "POST",
+    }),
+  deleteAccount: (confirmEmail: string) =>
+    request<{ ok: boolean }>("/api/dashboard/account", {
+      method: "DELETE",
+      body: JSON.stringify({ confirm: confirmEmail }),
+    }),
 };

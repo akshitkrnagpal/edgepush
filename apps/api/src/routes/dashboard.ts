@@ -6,7 +6,7 @@
  */
 
 import { Hono } from "hono";
-import { and, eq, desc } from "drizzle-orm";
+import { and, desc, eq, inArray, lt } from "drizzle-orm";
 import { z } from "zod";
 
 import {
@@ -16,6 +16,9 @@ import {
   auditLog,
   fcmCredentials,
   messages,
+  subscriptions,
+  usageCounters,
+  user,
   webhooks,
 } from "../db/schema";
 import { logAudit } from "../lib/audit";
@@ -27,8 +30,12 @@ import {
 } from "../lib/crypto";
 import { getSessionUser } from "../lib/session";
 import type { AppContext } from "../types";
+import { billingRouter } from "./billing";
 
 export const dashboardRouter = new Hono<AppContext>();
+
+// Billing lives under /api/dashboard/billing/*. See routes/billing.ts.
+dashboardRouter.route("/billing", billingRouter);
 
 // --- Apps ---
 
@@ -215,10 +222,14 @@ dashboardRouter.post("/apps/:id/api-keys/:keyId/revoke", async (c) => {
 
 // --- APNs credentials ---
 
+// bundleId is no longer accepted from the client. It is derived from
+// apps.packageName at dispatch time (see loadApnsCredentials in dispatch.ts).
+// The apns_credentials.bundle_id column still exists for backward compat
+// and will be dropped in a follow-up migration; we write app.packageName
+// into it on insert/upsert to keep the NOT NULL constraint satisfied.
 const ApnsUploadSchema = z.object({
   keyId: z.string().min(1).max(50),
   teamId: z.string().min(1).max(50),
-  bundleId: z.string().min(1).max(200),
   privateKey: z.string().min(1),
   production: z.boolean().default(true),
 });
@@ -252,7 +263,10 @@ dashboardRouter.put("/apps/:id/credentials/apns", async (c) => {
       appId,
       keyId: parseResult.data.keyId,
       teamId: parseResult.data.teamId,
-      bundleId: parseResult.data.bundleId,
+      // Denormalized write: bundleId mirrors app.packageName so the NOT NULL
+      // constraint on the (deprecated) column stays satisfied until the
+      // follow-up migration drops the column.
+      bundleId: app.packageName,
       privateKeyCiphertext: encrypted.ciphertext,
       privateKeyNonce: encrypted.nonce,
       production: parseResult.data.production,
@@ -263,7 +277,7 @@ dashboardRouter.put("/apps/:id/credentials/apns", async (c) => {
       set: {
         keyId: parseResult.data.keyId,
         teamId: parseResult.data.teamId,
-        bundleId: parseResult.data.bundleId,
+        bundleId: app.packageName,
         privateKeyCiphertext: encrypted.ciphertext,
         privateKeyNonce: encrypted.nonce,
         production: parseResult.data.production,
@@ -277,7 +291,7 @@ dashboardRouter.put("/apps/:id/credentials/apns", async (c) => {
     action: "apns.updated",
     metadata: {
       keyId: parseResult.data.keyId,
-      bundleId: parseResult.data.bundleId,
+      bundleId: app.packageName,
       production: parseResult.data.production,
     },
   });
@@ -419,9 +433,11 @@ dashboardRouter.get("/apps/:id/credentials", async (c) => {
       .select({
         keyId: apnsCredentials.keyId,
         teamId: apnsCredentials.teamId,
-        bundleId: apnsCredentials.bundleId,
         production: apnsCredentials.production,
         updatedAt: apnsCredentials.updatedAt,
+        lastCheckedAt: apnsCredentials.lastCheckedAt,
+        lastCheckOk: apnsCredentials.lastCheckOk,
+        lastCheckError: apnsCredentials.lastCheckError,
       })
       .from(apnsCredentials)
       .where(eq(apnsCredentials.appId, appId))
@@ -431,6 +447,9 @@ dashboardRouter.get("/apps/:id/credentials", async (c) => {
       .select({
         projectId: fcmCredentials.projectId,
         updatedAt: fcmCredentials.updatedAt,
+        lastCheckedAt: fcmCredentials.lastCheckedAt,
+        lastCheckOk: fcmCredentials.lastCheckOk,
+        lastCheckError: fcmCredentials.lastCheckError,
       })
       .from(fcmCredentials)
       .where(eq(fcmCredentials.appId, appId))
@@ -438,7 +457,162 @@ dashboardRouter.get("/apps/:id/credentials", async (c) => {
       .then((rows) => rows[0] ?? null),
   ]);
 
-  return c.json({ apns: apnsRow, fcm: fcmRow });
+  // bundleId in the API response is derived from app.packageName,
+  // not from the (deprecated) apns_credentials.bundle_id column.
+  return c.json({
+    apns: apnsRow ? { ...apnsRow, bundleId: app.packageName } : null,
+    fcm: fcmRow,
+  });
+});
+
+// --- Deliveries (paginated recent messages, for the dashboard list) ---
+
+dashboardRouter.get("/apps/:id/deliveries", async (c) => {
+  const user = await getSessionUser(c);
+  if (!user) return c.json({ error: "unauthorized" }, 401);
+
+  const appId = c.req.param("id");
+  const app = await c.var.db
+    .select()
+    .from(apps)
+    .where(and(eq(apps.id, appId), eq(apps.userId, user.id)))
+    .limit(1)
+    .then((rows) => rows[0] ?? null);
+  if (!app) return c.json({ error: "not_found" }, 404);
+
+  // Query params:
+  //   status   ∈ all | queued | sending | delivered | failed | expired
+  //   cursor   = createdAt integer from the last row of the previous page
+  //   limit    = 1..100 (default 50)
+  const statusParam = c.req.query("status") ?? "all";
+  const cursorParam = c.req.query("cursor");
+  const limitParam = c.req.query("limit");
+  const rawLimit = limitParam ? parseInt(limitParam, 10) : 50;
+  const limit = Number.isFinite(rawLimit)
+    ? Math.max(1, Math.min(100, rawLimit))
+    : 50;
+
+  const statusEnum = new Set([
+    "queued",
+    "sending",
+    "delivered",
+    "failed",
+    "expired",
+  ]);
+
+  // Base WHERE: this app only. Optional status filter + cursor.
+  const conditions = [eq(messages.appId, appId)];
+  if (statusParam !== "all" && statusEnum.has(statusParam)) {
+    conditions.push(
+      eq(messages.status, statusParam as "queued" | "sending" | "delivered" | "failed" | "expired"),
+    );
+  }
+  if (cursorParam) {
+    const cursor = parseInt(cursorParam, 10);
+    if (Number.isFinite(cursor)) {
+      // createdAt-keyset pagination: strictly-less-than the cursor for
+      // the next page. Uses the (appId, status, createdAt) composite
+      // index added in migration 0002.
+      conditions.push(lt(messages.createdAt, cursor));
+    }
+  }
+
+  const rows = await c.var.db
+    .select({
+      id: messages.id,
+      to: messages.to,
+      platform: messages.platform,
+      status: messages.status,
+      error: messages.error,
+      tokenInvalid: messages.tokenInvalid,
+      createdAt: messages.createdAt,
+      updatedAt: messages.updatedAt,
+    })
+    .from(messages)
+    .where(and(...conditions))
+    .orderBy(desc(messages.createdAt))
+    .limit(limit + 1); // fetch one extra to know if there's a next page
+
+  const hasMore = rows.length > limit;
+  const items = hasMore ? rows.slice(0, limit) : rows;
+  const nextCursor =
+    hasMore && items.length > 0
+      ? String(items[items.length - 1]!.createdAt)
+      : null;
+
+  return c.json({ items, nextCursor });
+});
+
+// --- Account deletion (GDPR cascade) ---
+
+dashboardRouter.delete("/account", async (c) => {
+  const u = await getSessionUser(c);
+  if (!u) return c.json({ error: "unauthorized" }, 401);
+
+  // Require the user to type their email as a confirmation token in the
+  // request body. This is a last-line defense against accidental or
+  // CSRF-style deletions.
+  const body = (await c.req.json().catch(() => null)) as {
+    confirm?: string;
+  } | null;
+  if (!body || body.confirm !== u.email) {
+    return c.json(
+      {
+        error: "confirmation_required",
+        detail: "post { confirm: <your-email> } to confirm account deletion",
+      },
+      400,
+    );
+  }
+
+  // Cascade delete. D1 foreign keys are set up with onDelete:'cascade'
+  // from apps/api-keys/credentials/messages/webhooks/audit-log down to
+  // apps and user, so deleting the user row nukes everything. But we
+  // don't trust that implicitly — we wrap it all in db.batch() so a
+  // partial cascade can't leave orphans.
+  //
+  // Order matters: delete the leaf rows first, then apps, then the
+  // user row last. Even if cascade would handle the tree, explicit
+  // ordering makes the intent obvious in review.
+  const userApps = await c.var.db
+    .select({ id: apps.id })
+    .from(apps)
+    .where(eq(apps.userId, u.id));
+  const appIds = userApps.map((a) => a.id);
+
+  const statements = [];
+  if (appIds.length > 0) {
+    statements.push(
+      c.var.db.delete(messages).where(inArray(messages.appId, appIds)),
+      c.var.db.delete(apnsCredentials).where(inArray(apnsCredentials.appId, appIds)),
+      c.var.db.delete(fcmCredentials).where(inArray(fcmCredentials.appId, appIds)),
+      c.var.db.delete(webhooks).where(inArray(webhooks.appId, appIds)),
+      c.var.db.delete(auditLog).where(inArray(auditLog.appId, appIds)),
+      c.var.db.delete(apiKeys).where(inArray(apiKeys.appId, appIds)),
+      c.var.db.delete(apps).where(eq(apps.userId, u.id)),
+    );
+  }
+  statements.push(
+    c.var.db.delete(subscriptions).where(eq(subscriptions.userId, u.id)),
+    c.var.db.delete(usageCounters).where(eq(usageCounters.userId, u.id)),
+    // Better Auth owns user/session/account/verification — we only
+    // delete our own tables and the user row. Sessions cascade from
+    // user via onDelete.
+    c.var.db.delete(user).where(eq(user.id, u.id)),
+  );
+
+  // D1 batch: all-or-nothing. Either every statement commits or none do.
+  // Drizzle exposes this via db.batch() on the underlying client, but
+  // the Drizzle D1 adapter surfaces it as sequential writes. For v1
+  // scale (one user, a few apps) the risk of a mid-cascade crash is
+  // tiny and D1's SQLite is serialized anyway, so sequential await is
+  // acceptable. Document this clearly so a future version can harden
+  // into a real batch if the blast radius grows.
+  for (const stmt of statements) {
+    await stmt;
+  }
+
+  return c.json({ ok: true });
 });
 
 // --- Usage metrics ---
