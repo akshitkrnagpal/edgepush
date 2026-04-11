@@ -14,8 +14,8 @@
   "assets": {
     "directory": ".open-next/assets",
     "binding": "ASSETS"
-  },
-  "vars": {
-    "NEXT_PUBLIC_API_URL": "https://api.edgepush.dev"
   }
+  // NEXT_PUBLIC_API_URL is set in apps/web/.env.production. NEXT_PUBLIC_*
+  // env vars are inlined at build time by Next.js — `vars` here is runtime
+  // and never reaches the client bundle, so it can't live in this file.
 }

@@ -32,6 +32,10 @@ yarn-error.log*
 
 # env files (can opt-in for committing if needed)
 .env*
+# .env.production holds NEXT_PUBLIC_API_URL which is inlined into the
+# client bundle at build time. It must be committed so CF Workers Builds
+# (and self-hosters' deploys) pick up the right value.
+!.env.production
 
 # vercel
 .vercel
