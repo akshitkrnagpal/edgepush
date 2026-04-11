@@ -144,20 +144,20 @@ export default function PricingPage() {
           <TierCard
             name="self-host"
             price="$0"
-            tagline="agpl-3.0 — run it on your own cloudflare account"
+            tagline="agpl-3.0, run on your own cloudflare account"
             featured={false}
             features={[
               "unlimited apps",
               "unlimited events",
               "your retention, your rules",
-              "same source — no gated features",
-              "byo credentials, resend, stripe",
-              "one `wrangler deploy`",
+              "same source, no gated features",
+              "byo credentials",
+              "two wrangler deploys (api + web)",
             ]}
             cta={{
-              label: "$ wrangler_deploy",
-              href: "https://github.com/akshitkrnagpal/edgepush#self-host",
-              external: true,
+              label: "$ self_host_guide",
+              href: "/selfhost",
+              external: false,
             }}
           />
         </div>

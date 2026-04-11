@@ -156,9 +156,9 @@ No credit card for Free. Pro is one Stripe Checkout away.
 ```
 7/ Self-host is unlimited. Literally.
 
-Clone the repo, create D1/KV/Queues, set 4 secrets, `wrangler
-deploy`. HOSTED_MODE=false means no plan gates, no billing, no
-retention cron. It's your infrastructure.
+Clone the repo, create D1/KV/Queues, set 4 secrets, run two
+wrangler deploys (api + dashboard). HOSTED_MODE=false means no
+plan gates, no billing, no retention cron. It's your infrastructure.
 
 Full guide: SELFHOST.md in the repo.
 ```
@@ -175,12 +175,14 @@ Full guide: SELFHOST.md in the repo.
 ```
 
 ```
-9/ This is v0.1. Working end to end but not yet production-hardened.
+9/ This is v0.2. Working end to end but not yet production-hardened.
 
-I'm specifically looking for other indie devs who already DIY push
-against APNs/FCM today to send me feedback — what should I build
-next, what's wrong with the API, what's missing.
+What's in v0.2 that Expo Push Service doesn't do: rich notifications
+with images, apns-collapse-id, fine-grained push types (voip,
+location, complication), absolute notification expiration. The full
+APNs and FCM payload surface, no proprietary token wrapper.
 
+I'm looking for indie devs who DIY push today to send me feedback.
 hello@edgepush.dev or open an issue.
 ```
 

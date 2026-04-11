@@ -530,7 +530,7 @@ export default function Home() {
         <div className="grid grid-cols-1 gap-8 md:grid-cols-2 lg:grid-cols-3">
           <Principle
             title="fully open source"
-            body="MIT licensed. Self-host on your own Cloudflare account with one wrangler deploy. Fork the repo and own it forever."
+            body="AGPL-3.0 server, MIT SDK and CLI. Self-host on your own Cloudflare account, two wrangler deploys, no telemetry. Fork the repo and own it forever."
           />
           <Principle
             title="native tokens"

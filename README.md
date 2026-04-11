@@ -1,6 +1,6 @@
 # edgepush
 
-> Open source push notifications for iOS and Android. Self-hosted on Cloudflare Workers, bring your own APNs and FCM credentials.
+> Open source push notifications for iOS and Android. Hosted at [edgepush.dev](https://edgepush.dev) or self-hosted on Cloudflare Workers. Bring your own APNs and FCM credentials.
 
 **Server + dashboard: [AGPL-3.0](./LICENSE). SDK + CLI: MIT.** See [`COMMERCIAL.md`](./COMMERCIAL.md) for the dual-license details and when you'd need a commercial license (most users never do).
 
@@ -34,7 +34,7 @@ If you ship a mobile app and you've ever felt weird about handing your APNs key 
 - Stripe Checkout with HMAC-signed `client_reference_id` (no cardholder-email-vs-signup-email bug class)
 - 5-event webhook handler with idempotency dedup, 5-minute replay window, raw-fetch (no `stripe` npm package)
 - Monthly send counter with atomic reservation — race-safe on concurrent sends at the quota boundary
-- Plan gating via `HOSTED_MODE` env var: `false` means unlimited (self-host), `true` enforces the Free / Pro / Enterprise limits
+- Plan gating via `HOSTED_MODE` env var: `false` means unlimited (self-host), `true` enforces the Free / Pro limits
 
 ### Developer + operator experience
 - Dashboard for app management, credential upload, credential health, recent deliveries, audit log, test sends, account deletion, billing

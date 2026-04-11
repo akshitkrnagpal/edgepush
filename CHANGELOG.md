@@ -48,9 +48,86 @@ and was missing from edgepush v0.1.
 `--priority`, `--ttl`, `--expiration-at`, `--push-type`,
 `--mutable-content`, `--content-available`, `--time-sensitive`.
 
+### Added — observability
+
+- **Webhook delivery failures land in `worker_errors`** with
+  `kind='webhook'`. Previously a non-2xx or thrown webhook attempt
+  was silently dropped: `dispatchWebhook` returned `{ok: false}` and
+  the caller in `dispatch.ts` ignored it. The infrastructure for
+  surfacing these (the `webhook` kind in `WorkerErrorKind`, the daily
+  operator digest reading from `worker_errors`) was already wired but
+  nothing was writing to it. Now every failed attempt logs payload =
+  `{messageId, appId, event, url, status, reason}`. The push itself
+  still gets acked because webhook delivery is observability-only and
+  doesn't gate the push pipeline. Real retry semantics (a dedicated
+  webhook queue with its own consumer + DLQ) are a follow-up.
+- **Deep health endpoint**: `GET /health/deep`, gated on a new
+  `OPERATOR_PROBE_TOKEN` secret matched against an
+  `x-edgepush-operator-token` header. Disabled (503) when the secret
+  is unset (fail closed). When enabled, pings D1 (`SELECT 1`), pings
+  KV (read sentinel key), reports the killswitch state, reports the
+  queue binding presence. Returns per-component status + latency_ms +
+  total_ms + the hosted_mode flag. Roll-up: any 'down' returns 503;
+  'degraded' (e.g. killswitch active) returns 200 with
+  `status='degraded'`.
+
+### Added — landing surface
+
+- **Self-host marketing landing at `/selfhost`**. Different vocabulary
+  and proof points than the SaaS landing at `/`: deploy.sh code panel
+  showing the real wrangler commands, "what you actually get" feature
+  grid keyed on `HOSTED_MODE=false`, version cards for server / sdk /
+  cli linking to releases + npm + changelog, "honest tradeoffs" FAQ
+  covering AGPL, updates, costs, migration. Single source of truth for
+  the displayed version lives in `apps/web/src/lib/version.ts`.
+- **Second wrangler config**: `apps/web/wrangler.selfhost.jsonc`
+  deploys the same `.open-next/` bundle as a separate worker
+  (`edgepush-selfhost-marketing`) bound to `selfhost.edgepush.dev`.
+  One bundle, one Next.js app, two routes.
+- **`apps/web/src/proxy.ts`** (Next 16 proxy convention; was
+  middleware before) rewrites `/` → `/selfhost` when the host starts
+  with `selfhost.`, so visitors to selfhost.edgepush.dev land on the
+  self-host landing without seeing /selfhost in the URL.
+- **`/docs` page rebuild**: 11 → 14 sections. New: iOS client (Swift
+  AppDelegate + APNs token hex conversion), Android client (Kotlin
+  FirebaseMessagingService + onNewToken), React Native (bare with
+  @react-native-firebase, Expo with the explicit
+  `getDevicePushTokenAsync` vs `getExpoPushTokenAsync` callout — the
+  one trap that decides whether an Expo dev migrates successfully).
+  Also added: rich notifications section (image, mutableContent,
+  collapseId, expirationAt, pushType), webhooks section (HMAC POST
+  format + node:crypto verify helper), cli section.
+
+### Added — docs + meta
+
+- **`CONTRIBUTING.md`**: orientation, setup, the four pre-push gates,
+  what to work on (integration tests, mobile SDK examples, DLQ replay
+  UI, webhook retry queue), code style rules from DESIGN.md, commit
+  message rules, dual-license rules.
+- **SaaS landing recheck**: hero copy is now SaaS-first ("Hosted push
+  notifications for iOS and Android. Free tier covers 10K events/
+  month. Pro is $29 when you outgrow it"). Pricing section is 3 real
+  cards (Free / Pro / Self-host) with the actual numbers. Footer
+  rebuilt as 4 columns. CTA band copy reflects the existence of a
+  Pro tier instead of "no upsell".
+
+### Fixed
+
+- **Sign-in 404'd on edgepush.dev**: `auth-client.ts` and `api.ts`
+  fall back to `http://localhost:8787` when
+  `process.env.NEXT_PUBLIC_API_URL` is unset, and the production
+  build was inlining the fallback into the client bundle.
+  `NEXT_PUBLIC_*` values are baked at BUILD time by Next.js, not read
+  at runtime, so the `vars.NEXT_PUBLIC_API_URL` in `wrangler.jsonc`
+  never reached the bundle. Fix: `apps/web/.env.production` (now
+  committed) sets the correct value at build time. The misleading
+  runtime var was removed from `wrangler.jsonc` and replaced with a
+  comment pointing at `.env.production`. SELFHOST.md section 7 got a
+  callout block explaining the gotcha so self-hosters don't repeat it.
+
 ### Versioning
 
-- `@edgepush/sdk` 0.1.0 → **0.2.0** (additive — all new fields are
+- `@edgepush/sdk` 0.1.0 → **0.2.0** (additive, all new fields are
   optional, no breaking changes)
 - `@edgepush/cli` 0.1.0 → **0.2.0**
 
