@@ -3,11 +3,17 @@ name: Release
 # Publishes @edgepush/sdk and @edgepush/cli to npm whenever a tag like
 # v0.1.0 is pushed. Both packages share a version and ship together.
 #
-# Setup:
-#   1. Create an npm automation token: npmjs.com → Access Tokens → Automation
-#   2. Add it as a repo secret named NPM_TOKEN
-#   3. Bump versions in packages/{sdk,cli}/package.json, commit, then:
-#        git tag v0.1.0 && git push origin v0.1.0
+# Auth: npm Trusted Publishers (OIDC). No NPM_TOKEN secret needed.
+# Configure trusted publishing for each package on npmjs.com:
+#   Package → Settings → Publishing access → Trusted Publishers
+#   Repository:   akshitkrnagpal/edgepush
+#   Workflow:     .github/workflows/release.yml
+#   Environment:  (leave blank)
+#
+# Release flow:
+#   pnpm release patch          # bumps both packages, commits, tags
+#   git push origin main
+#   git push origin v<version>  # triggers this workflow
 
 on:
   push:
@@ -19,7 +25,7 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
-      id-token: write # for npm provenance
+      id-token: write # required for OIDC + provenance
     steps:
       - uses: actions/checkout@v4
 
@@ -29,9 +35,13 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
           cache: pnpm
           registry-url: https://registry.npmjs.org
+
+      # Trusted Publishers landed in npm 11.5.1. Node 22 ships with 10.x.
+      - name: Upgrade npm for Trusted Publisher support
+        run: npm install -g npm@latest
 
       - name: Install
         run: pnpm install --frozen-lockfile
@@ -49,14 +59,19 @@ jobs:
       - name: Build
         run: pnpm --filter @edgepush/sdk --filter @edgepush/cli build
 
-      - name: Publish @edgepush/sdk
-        run: pnpm publish --access public --no-git-checks --provenance
+      # pnpm pack handles the workspace:* → real version rewrite that npm
+      # publish doesn't know how to do. Then npm publish (>=11.5.1) handles
+      # the OIDC handshake with Trusted Publishers.
+      - name: Pack @edgepush/sdk
+        run: pnpm pack --pack-destination "$RUNNER_TEMP"
         working-directory: packages/sdk
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Pack @edgepush/cli
+        run: pnpm pack --pack-destination "$RUNNER_TEMP"
+        working-directory: packages/cli
+
+      - name: Publish @edgepush/sdk
+        run: npm publish "$RUNNER_TEMP"/edgepush-sdk-*.tgz --access public --provenance
 
       - name: Publish @edgepush/cli
-        run: pnpm publish --access public --no-git-checks --provenance
-        working-directory: packages/cli
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: npm publish "$RUNNER_TEMP"/edgepush-cli-*.tgz --access public --provenance
