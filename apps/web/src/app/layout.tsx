@@ -1,16 +1,13 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { JetBrains_Mono } from "next/font/google";
 import Script from "next/script";
 import "./globals.css";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
+const jetbrainsMono = JetBrains_Mono({
+  variable: "--font-jetbrains-mono",
   subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
+  weight: ["400", "500", "700", "800"],
+  display: "swap",
 });
 
 const SITE_URL = "https://edgepush.dev";
@@ -18,8 +15,8 @@ const SITE_URL = "https://edgepush.dev";
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
   title: {
-    default: "edgepush - Open source push notifications at the edge",
-    template: "%s - edgepush",
+    default: "edgepush — Open source push notifications at the edge",
+    template: "%s — edgepush",
   },
   description:
     "Open source alternative to Expo Push Notification Service. Send native iOS and Android pushes through a single API, deployed on Cloudflare Workers. Free, MIT licensed.",
@@ -43,14 +40,14 @@ export const metadata: Metadata = {
     type: "website",
     url: SITE_URL,
     siteName: "edgepush",
-    title: "edgepush - Open source push notifications at the edge",
+    title: "edgepush — Open source push notifications at the edge",
     description:
       "Open source alternative to Expo Push Notification Service. Built on Cloudflare Workers.",
     locale: "en_US",
   },
   twitter: {
     card: "summary_large_image",
-    title: "edgepush - Open source push notifications at the edge",
+    title: "edgepush — Open source push notifications at the edge",
     description:
       "Open source alternative to Expo Push Notification Service. Built on Cloudflare Workers.",
     creator: "@akshit_io",
@@ -101,9 +98,16 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+      className={`${jetbrainsMono.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col bg-zinc-950 text-zinc-100">
+      <head>
+        <link rel="preconnect" href="https://api.fontshare.com" crossOrigin="" />
+        <link
+          rel="stylesheet"
+          href="https://api.fontshare.com/v2/css?f[]=satoshi@400,500,700,900&display=swap"
+        />
+      </head>
+      <body className="min-h-full flex flex-col bg-bg text-text">
         {children}
         <Script
           id="structured-data"

@@ -19,12 +19,13 @@ export default function Icon() {
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
-          background: "linear-gradient(135deg, #10b981, #06b6d4)",
-          color: "white",
-          fontSize: 18,
-          fontWeight: 700,
-          borderRadius: 6,
-          fontFamily: "system-ui",
+          background: "#000000",
+          color: "#ff6b1a",
+          fontSize: 16,
+          fontWeight: 800,
+          border: "1.5px solid #ff6b1a",
+          fontFamily: "ui-monospace, monospace",
+          letterSpacing: "-0.02em",
         }}
       >
         ep
