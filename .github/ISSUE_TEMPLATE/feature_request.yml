@@ -1,0 +1,42 @@
+name: Feature Request
+description: Suggest a new feature or improvement
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Feature requests are how edgepush evolves. If you're planning
+        to implement it yourself, mention that and we'll coordinate.
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: What problem are you trying to solve?
+      placeholder: I'm trying to ... but edgepush doesn't support ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: solution
+    attributes:
+      label: What would the ideal solution look like?
+      placeholder: An API field, a dashboard feature, a CLI flag, a new endpoint, etc.
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: What alternatives have you considered?
+      placeholder: Workarounds you've tried, other tools that solve this, etc.
+
+  - type: dropdown
+    id: component
+    attributes:
+      label: Component
+      options:
+        - API
+        - Dashboard
+        - SDK
+        - CLI
+        - Docs
+        - Self-host
+        - Other

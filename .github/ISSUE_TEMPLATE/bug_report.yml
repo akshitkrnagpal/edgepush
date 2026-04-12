@@ -1,0 +1,64 @@
+name: Bug Report
+description: Something isn't working as expected
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting. Please fill in enough detail so we can reproduce it.
+
+  - type: dropdown
+    id: component
+    attributes:
+      label: Component
+      options:
+        - API (/v1/send, /v1/receipts)
+        - Dashboard (apps/web)
+        - SDK (@edgepush/sdk)
+        - CLI (@edgepush/cli)
+        - Self-host setup
+        - Credential health probes
+        - Billing / Stripe
+        - Other
+    validations:
+      required: true
+
+  - type: dropdown
+    id: deployment
+    attributes:
+      label: Deployment
+      options:
+        - Hosted (edgepush.dev)
+        - Self-hosted
+    validations:
+      required: true
+
+  - type: textarea
+    id: description
+    attributes:
+      label: What happened?
+      placeholder: Describe the bug. Include error messages, HTTP status codes, or receipt error fields if applicable.
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: What did you expect?
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Call /v1/send with payload ...
+        2. Check receipt ...
+        3. See error ...
+
+  - type: input
+    id: sdk-version
+    attributes:
+      label: SDK / CLI version
+      placeholder: "@edgepush/sdk@0.2.0"
