@@ -16,7 +16,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: pnpm/action-setup@v4
+      - uses: pnpm/action-setup@v6
         # Version is read from packageManager in package.json.
         # Do NOT set `version:` here or pnpm/action-setup will error
         # with "Multiple versions of pnpm specified".
