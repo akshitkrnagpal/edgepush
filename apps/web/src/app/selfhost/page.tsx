@@ -192,6 +192,10 @@ export default function SelfHostPage() {
               <span className="text-text">pnpm wrangler queues create edgepush-dispatch</span>
               {"\n"}
               <span className="text-text">pnpm wrangler queues create edgepush-dispatch-dlq</span>
+              {"\n"}
+              <span className="text-text">pnpm wrangler queues create edgepush-webhook</span>
+              {"\n"}
+              <span className="text-text">pnpm wrangler queues create edgepush-webhook-dlq</span>
               {"\n\n"}
               <span className="text-muted">{"# paste IDs into wrangler.jsonc, then:"}</span>
               {"\n"}

@@ -97,6 +97,8 @@ pnpm wrangler d1 create edgepush
 pnpm wrangler kv namespace create edgepush-cache
 pnpm wrangler queues create edgepush-dispatch
 pnpm wrangler queues create edgepush-dispatch-dlq
+pnpm wrangler queues create edgepush-webhook
+pnpm wrangler queues create edgepush-webhook-dlq
 
 # Paste the printed IDs into wrangler.jsonc
 

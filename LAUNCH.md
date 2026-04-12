@@ -177,12 +177,12 @@ Full guide: SELFHOST.md in the repo.
 ```
 9/ This is v0.2. Working end to end but not yet production-hardened.
 
-What's in v0.2 that Expo Push Service doesn't do: rich notifications
-with images, apns-collapse-id, fine-grained push types (voip,
-location, complication), absolute notification expiration. The full
-APNs and FCM payload surface, no proprietary token wrapper.
+What v0.2 does that Expo Push can't: rich notifications with images,
+apns-collapse-id, fine-grained push types (voip, location),
+absolute expiration, FCM topic + condition targeting, webhook retry
+with backoff. The full APNs/FCM surface, no proprietary token.
 
-I'm looking for indie devs who DIY push today to send me feedback.
+Looking for indie devs who DIY push today to tell me what's missing.
 hello@edgepush.dev or open an issue.
 ```
 

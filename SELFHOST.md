@@ -87,6 +87,8 @@ Copy the `id` it prints.
 ```bash
 pnpm --filter @edgepush/api exec wrangler queues create edgepush-dispatch
 pnpm --filter @edgepush/api exec wrangler queues create edgepush-dispatch-dlq
+pnpm --filter @edgepush/api exec wrangler queues create edgepush-webhook
+pnpm --filter @edgepush/api exec wrangler queues create edgepush-webhook-dlq
 ```
 
 No IDs to copy, queues are referenced by name.
