@@ -1,5 +1,11 @@
 # edgepush
 
+[![CI](https://github.com/akshitkrnagpal/edgepush/actions/workflows/ci.yml/badge.svg)](https://github.com/akshitkrnagpal/edgepush/actions/workflows/ci.yml)
+[![npm @edgepush/sdk](https://img.shields.io/npm/v/@edgepush/sdk?label=%40edgepush%2Fsdk)](https://www.npmjs.com/package/@edgepush/sdk)
+[![npm @edgepush/cli](https://img.shields.io/npm/v/@edgepush/cli?label=%40edgepush%2Fcli)](https://www.npmjs.com/package/@edgepush/cli)
+[![License: AGPL-3.0](https://img.shields.io/badge/server-AGPL--3.0-blue)](./LICENSE)
+[![License: MIT](https://img.shields.io/badge/sdk%2Bcli-MIT-green)](./packages/sdk/LICENSE)
+
 > Open source push notifications for iOS and Android. Hosted at [edgepush.dev](https://edgepush.dev) or self-hosted on Cloudflare Workers. Bring your own APNs and FCM credentials.
 
 **Server + dashboard: [AGPL-3.0](./LICENSE). SDK + CLI: MIT.** See [`COMMERCIAL.md`](./COMMERCIAL.md) for the dual-license details and when you'd need a commercial license (most users never do).
