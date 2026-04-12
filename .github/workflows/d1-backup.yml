@@ -124,7 +124,7 @@ jobs:
           rm /tmp/d1-backup/edgepush-${{ steps.ts.outputs.value }}.sql.gz
 
       - name: upload as GH Actions artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: d1-backup-${{ steps.ts.outputs.value }}
           path: /tmp/d1-backup/edgepush-${{ steps.ts.outputs.value }}.*
