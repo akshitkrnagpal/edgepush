@@ -17,6 +17,9 @@ const sections = [
   { id: "rich", label: "rich notifications" },
   { id: "receipts", label: "receipts" },
   { id: "webhooks", label: "webhooks" },
+  { id: "errors", label: "error codes" },
+  { id: "rate-limits", label: "rate limits" },
+  { id: "auth", label: "api keys" },
   { id: "batch", label: "batch" },
   { id: "cli", label: "cli" },
   { id: "api", label: "rest api" },
@@ -510,7 +513,210 @@ function verify(body: string, sigHeader: string, secret: string) {
 }`}</Code>
           </Section>
 
-          <Section id="batch" n="11" title="batch sends">
+          <Section id="errors" n="11" title="error codes">
+            <p className="mb-4">
+              When a push fails, the receipt&apos;s{" "}
+              <span className="font-mono text-text">error</span> field
+              contains the reason code from APNs or FCM. The{" "}
+              <span className="font-mono text-text">tokenInvalid</span>{" "}
+              boolean flags tokens you should remove from your database.
+            </p>
+            <h3 className="mt-6 mb-3 font-mono text-[14px] font-bold text-text">
+              APNs error codes
+            </h3>
+            <div className="overflow-x-auto border border-rule-strong bg-surface">
+              <table className="w-full font-mono text-[12px]">
+                <thead>
+                  <tr className="border-b border-rule-strong bg-surface-2 text-left text-[10px] uppercase tracking-[0.12em] text-muted">
+                    <th className="px-4 py-2 font-medium">reason</th>
+                    <th className="px-4 py-2 font-medium">tokenInvalid</th>
+                    <th className="px-4 py-2 font-medium">action</th>
+                  </tr>
+                </thead>
+                <tbody className="text-muted-strong">
+                  <ErrorRow reason="BadDeviceToken" invalid="true" action="Remove the token. The device unregistered or the token is malformed." />
+                  <ErrorRow reason="Unregistered" invalid="true" action="Remove the token. The device was wiped or the app was uninstalled." />
+                  <ErrorRow reason="DeviceTokenNotForTopic" invalid="true" action="Remove the token. It belongs to a different app (bundle ID mismatch)." />
+                  <ErrorRow reason="PayloadTooLarge" invalid="false" action="Reduce your payload size (4096 byte APNs limit)." />
+                  <ErrorRow reason="TooManyRequests" invalid="false" action="Back off. Apple is rate-limiting your sends to this device." />
+                  <ErrorRow reason="InternalServerError" invalid="false" action="Retry. Transient APNs failure." />
+                  <ErrorRow reason="ServiceUnavailable" invalid="false" action="Retry. APNs is temporarily down." />
+                  <ErrorRow reason="ExpiredProviderToken" invalid="false" action="Your .p8 key may be revoked. Check the credential health panel." />
+                  <ErrorRow reason="InvalidProviderToken" invalid="false" action="Team ID, key ID, or .p8 key is wrong. Re-upload the credential." />
+                  <ErrorRow reason="TopicDisallowed" invalid="false" action="The bundle ID isn't authorized for push. Check your Apple Developer portal." />
+                </tbody>
+              </table>
+            </div>
+            <h3 className="mt-6 mb-3 font-mono text-[14px] font-bold text-text">
+              FCM error codes
+            </h3>
+            <div className="overflow-x-auto border border-rule-strong bg-surface">
+              <table className="w-full font-mono text-[12px]">
+                <thead>
+                  <tr className="border-b border-rule-strong bg-surface-2 text-left text-[10px] uppercase tracking-[0.12em] text-muted">
+                    <th className="px-4 py-2 font-medium">status</th>
+                    <th className="px-4 py-2 font-medium">tokenInvalid</th>
+                    <th className="px-4 py-2 font-medium">action</th>
+                  </tr>
+                </thead>
+                <tbody className="text-muted-strong">
+                  <ErrorRow reason="NOT_FOUND" invalid="true" action="Remove the token. The registration no longer exists." />
+                  <ErrorRow reason="UNREGISTERED" invalid="true" action="Remove the token. The app was uninstalled." />
+                  <ErrorRow reason="INVALID_ARGUMENT" invalid="true" action="The token is malformed. Remove it." />
+                  <ErrorRow reason="PERMISSION_DENIED" invalid="false" action="The service account lost cloud messaging permissions. Re-check IAM." />
+                  <ErrorRow reason="UNAVAILABLE" invalid="false" action="Retry. FCM is temporarily overloaded." />
+                  <ErrorRow reason="INTERNAL" invalid="false" action="Retry. Transient FCM failure." />
+                  <ErrorRow reason="QUOTA_EXCEEDED" invalid="false" action="Back off. You hit FCM's per-project rate limit." />
+                  <ErrorRow reason="SENDER_ID_MISMATCH" invalid="false" action="The token was registered under a different Firebase project." />
+                </tbody>
+              </table>
+            </div>
+          </Section>
+
+          <Section id="rate-limits" n="12" title="rate limits + quotas">
+            <p className="mb-4">
+              Two limits gate{" "}
+              <span className="font-mono text-text">POST /v1/send</span>:
+              a per-app burst rate limit and (on the hosted tier) a monthly
+              event quota. Rate-limited requests do NOT consume quota.
+            </p>
+            <h3 className="mt-6 mb-3 font-mono text-[14px] font-bold text-text">
+              Per-app rate limit
+            </h3>
+            <p className="mb-4">
+              Token-bucket via a Durable Object, scoped to each app.
+              Default: 1000 events/minute burst capacity. When exceeded,
+              the API returns:
+            </p>
+            <Code>{`HTTP 429
+{
+  "error": "rate_limited",
+  "retry_after_ms": 1200
+}`}</Code>
+            <p className="mt-4">
+              Wait <span className="font-mono text-text">retry_after_ms</span>{" "}
+              and resend. The bucket refills continuously, no manual reset
+              needed. Self-hosters can tune the limit by editing{" "}
+              <span className="font-mono text-text">
+                DEFAULT_CAPACITY
+              </span>{" "}
+              in <span className="font-mono text-text">apps/api/src/rate-limiter.ts</span>.
+            </p>
+
+            <h3 className="mt-6 mb-3 font-mono text-[14px] font-bold text-text">
+              Monthly event quota (hosted tier only)
+            </h3>
+            <p className="mb-4">
+              Free: 10,000 events/month. Pro: 50,000 events/month.
+              Self-host (<span className="font-mono text-text">HOSTED_MODE=false</span>):
+              unlimited. When exceeded:
+            </p>
+            <Code>{`HTTP 429
+{
+  "error": "quota_exceeded",
+  "plan": "free",
+  "limit": 10000,
+  "used": 10000,
+  "year_month": "2026-04",
+  "detail": "monthly send limit for plan \\"free\\" is 10000 events..."
+}
+
+Headers:
+  x-ratelimit-limit: 10000
+  x-ratelimit-used:  10000
+  x-ratelimit-scope: monthly`}</Code>
+            <p className="mt-4">
+              The counter resets on the first day of each calendar month.
+              Upgrade to Pro on{" "}
+              <a
+                href="/pricing"
+                className="text-text underline decoration-accent underline-offset-4 hover:text-accent"
+              >
+                /pricing
+              </a>{" "}
+              to raise the cap.
+            </p>
+
+            <h3 className="mt-6 mb-3 font-mono text-[14px] font-bold text-text">
+              Kill switch (503)
+            </h3>
+            <p className="mb-4">
+              If the operator enables the kill switch,{" "}
+              <span className="font-mono text-text">/v1/send</span> returns{" "}
+              <span className="font-mono text-text">503 maintenance</span>{" "}
+              with a <span className="font-mono text-text">Retry-After: 60</span>{" "}
+              header before touching auth or the DB. This is an operator-level
+              safety valve, not something you need to handle in normal
+              operation.
+            </p>
+          </Section>
+
+          <Section id="auth" n="13" title="api keys">
+            <p className="mb-4">
+              Every <span className="font-mono text-text">/v1/send</span>{" "}
+              and <span className="font-mono text-text">/v1/receipts</span>{" "}
+              request requires a Bearer token in the{" "}
+              <span className="font-mono text-text">Authorization</span>{" "}
+              header:
+            </p>
+            <Code>{`Authorization: Bearer com.acme.myapp|sk_abc123def456...`}</Code>
+
+            <h3 className="mt-6 mb-3 font-mono text-[14px] font-bold text-text">
+              Key format
+            </h3>
+            <p className="mb-4">
+              <span className="font-mono text-text">&lt;package_name&gt;|&lt;secret&gt;</span>.
+              The package name prefix is the app&apos;s bundle/package ID
+              (what you entered when creating the app). The secret is a
+              random string generated by the server. Keys self-identify in
+              logs so you can tell which app a request belongs to.
+            </p>
+
+            <h3 className="mt-6 mb-3 font-mono text-[14px] font-bold text-text">
+              Creating and revoking
+            </h3>
+            <p className="mb-4">
+              Create keys in the dashboard under your app&apos;s API Keys
+              section. The full key is shown exactly once at creation time.
+              Copy it immediately. You can create multiple keys per app
+              (e.g., one for your production server, one for CI).
+            </p>
+            <p className="mb-4">
+              To revoke a key, click the revoke button in the dashboard. The
+              key stops working immediately. There is no grace period or
+              overlap window. If you need zero-downtime rotation, create a
+              new key first, update your server to use it, then revoke the
+              old one.
+            </p>
+
+            <h3 className="mt-6 mb-3 font-mono text-[14px] font-bold text-text">
+              Environment variables
+            </h3>
+            <p>
+              Store your key in an environment variable, never in source code:
+            </p>
+            <Code>{`# .env (never commit this file)
+EDGEPUSH_API_KEY=com.acme.myapp|sk_abc123def456...
+
+# your server
+const client = new Edgepush({
+  apiKey: process.env.EDGEPUSH_API_KEY,
+});`}</Code>
+            <p className="mt-4">
+              The CLI reads from <span className="font-mono text-text">EDGEPUSH_API_KEY</span>{" "}
+              and <span className="font-mono text-text">EDGEPUSH_BASE_URL</span>{" "}
+              environment variables as overrides. See{" "}
+              <a
+                href="#cli"
+                className="text-text underline decoration-accent underline-offset-4 hover:text-accent"
+              >
+                the CLI section
+              </a>{" "}
+              for details.
+            </p>
+          </Section>
+
+          <Section id="batch" n="14" title="batch sends">
             <p className="mb-4">
               Send up to 100 messages in a single call. Dispatched through a
               Cloudflare Queue with automatic retries.
@@ -523,7 +729,7 @@ function verify(body: string, sigHeader: string, secret: string) {
 const receipts = await client.getReceipts(tickets.map((t) => t.id));`}</Code>
           </Section>
 
-          <Section id="cli" n="12" title="cli">
+          <Section id="cli" n="15" title="cli">
             <p className="mb-4">
               <span className="font-mono text-text">@edgepush/cli</span> is
               a terminal client for sending pushes from your laptop or a
@@ -549,7 +755,7 @@ edgepush receipt <ticket_id>`}</Code>
             </p>
           </Section>
 
-          <Section id="api" n="13" title="rest api">
+          <Section id="api" n="16" title="rest api">
             <p className="mb-4">
               The SDK wraps a simple REST API. You can call it directly from
               any language. All endpoints require{" "}
@@ -575,7 +781,7 @@ curl https://api.edgepush.dev/v1/receipts/TICKET_ID \\
   -H "Authorization: Bearer io.acme.myapp|abc..."`}</Code>
           </Section>
 
-          <Section id="self-host" n="14" title="self-host it">
+          <Section id="self-host" n="17" title="self-host it">
             <p className="mb-4">
               edgepush server + dashboard are{" "}
               <span className="font-mono text-text">AGPL-3.0</span>. The SDK,
@@ -670,5 +876,29 @@ function Code({ children }: { children: string }) {
     <pre className="mt-4 overflow-x-auto border border-rule-strong bg-surface p-5 font-mono text-[13px] leading-[1.6] text-text">
       <code>{children}</code>
     </pre>
+  );
+}
+
+function ErrorRow({
+  reason,
+  invalid,
+  action,
+}: {
+  reason: string;
+  invalid: string;
+  action: string;
+}) {
+  return (
+    <tr className="border-b border-rule last:border-b-0">
+      <td className="px-4 py-2 text-text">{reason}</td>
+      <td
+        className={`px-4 py-2 ${
+          invalid === "true" ? "text-error" : "text-muted"
+        }`}
+      >
+        {invalid}
+      </td>
+      <td className="px-4 py-2">{action}</td>
+    </tr>
   );
 }
