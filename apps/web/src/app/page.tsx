@@ -618,6 +618,14 @@ export default function Home() {
                 values={["yes", "best effort", "yes", "yes"]}
               />
               <CompareRow
+                label="fcm topic / condition targeting"
+                values={["yes", "no", "yes", "yes"]}
+              />
+              <CompareRow
+                label="webhook retry with backoff"
+                values={["yes (3x)", "no", "yes", "yes"]}
+              />
+              <CompareRow
                 label="hard rate ceiling"
                 values={["per-app, tunable", "600/sec global", "n/a", "n/a"]}
               />

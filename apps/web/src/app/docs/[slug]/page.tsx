@@ -79,6 +79,7 @@ const CONTENT: Record<string, React.FC> = {
   "react-native": ReactNativeContent,
   send: SendContent,
   rich: RichContent,
+  topics: TopicsContent,
   receipts: ReceiptsContent,
   webhooks: WebhooksContent,
   errors: ErrorsContent,
@@ -403,7 +404,55 @@ function RichContent() {
   );
 }
 
-// -- 09 receipts --
+// -- 09 topics --
+function TopicsContent() {
+  return (
+    <>
+      <p className="mb-4">
+        FCM supports server-side topic broadcasting. Instead of sending to a
+        specific device token, you can send to all devices subscribed to a
+        topic. edgepush passes the topic or condition straight through to
+        the FCM HTTP v1 API.
+      </p>
+      <h3 className="mt-6 mb-3 font-mono text-[14px] font-bold text-text">
+        Topic send
+      </h3>
+      <p className="mb-3">
+        Devices subscribe to topics client-side via the Firebase SDK.
+        Your server sends to the topic name (no &quot;/topics/&quot; prefix):
+      </p>
+      <Code>{`// all devices subscribed to "breaking-news" get this
+await client.send({
+  topic: "breaking-news",
+  title: "Earthquake in Tokyo",
+  body: "Magnitude 6.2, no tsunami warning",
+});`}</Code>
+      <h3 className="mt-6 mb-3 font-mono text-[14px] font-bold text-text">
+        Condition send
+      </h3>
+      <p className="mb-3">
+        Target devices subscribed to a boolean combination of topics:
+      </p>
+      <Code>{`// devices subscribed to "sports" AND ("news" OR "breaking")
+await client.send({
+  condition: "'sports' in topics && ('news' in topics || 'breaking' in topics)",
+  title: "Match started",
+  body: "Team A vs Team B, kickoff now",
+});`}</Code>
+      <Notes
+        items={[
+          "Topic and condition sends are FCM-only. APNs does not have server-side topic broadcasting.",
+          "Exactly one of to, topic, or condition must be set per message. The API rejects requests with more than one.",
+          "A topic send consumes 1 event from your monthly quota regardless of how many devices are subscribed. FCM fans out on their side.",
+          "Devices subscribe to topics via FirebaseMessaging.getInstance().subscribeToTopic(\"news\") on Android or Messaging.messaging().subscribe(toTopic:) on iOS (through the Firebase SDK, not edgepush).",
+          "The CLI supports --topic and --condition flags: edgepush send --topic news --title \"Hello\"",
+        ]}
+      />
+    </>
+  );
+}
+
+// -- 10 receipts --
 function ReceiptsContent() {
   return (
     <>
