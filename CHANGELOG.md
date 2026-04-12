@@ -125,10 +125,41 @@ and was missing from edgepush v0.1.
   comment pointing at `.env.production`. SELFHOST.md section 7 got a
   callout block explaining the gotcha so self-hosters don't repeat it.
 
+### Added: features
+
+- **Stripe Billing Portal** at `POST /api/dashboard/billing/portal`.
+  Pro customers can manage their subscription (cancel, update payment
+  method, view invoices) from `/dashboard/settings` without emailing
+  the operator. Free-tier users who never upgraded get a 409 pointing
+  them to `/pricing`. New `createBillingPortalSession` in
+  `lib/stripe.ts` using raw-fetch against the Stripe Billing Portal
+  Sessions API. Dashboard settings page gains a "billing" panel.
+
+- **Webhook retry queue**. Failed webhook deliveries now retry 3x
+  with Cloudflare Queues' built-in exponential backoff before being
+  dead-lettered. New queue `edgepush-webhook` with DLQ
+  `edgepush-webhook-dlq` (separate from the dispatch DLQ).
+  `dispatch.ts` inline first attempt (fast path for healthy
+  endpoints); on failure enqueues into WEBHOOK_QUEUE.
+  `webhook-consumer.ts` handles retries: permanent 4xx (400/401/403/
+  404/405/410) gets acked + logged; transient failures retry; DLQ
+  consumer logs to worker_errors. The push dispatch consumer stays
+  fast because webhook retries are offloaded to a separate queue.
+
+- **FCM topic and condition targeting**. `PushMessage.to` is now
+  optional; `topic` and `condition` are new alternatives (Zod refine:
+  exactly one must be set). Topic sends go to all devices subscribed
+  via the Firebase client SDK. Condition sends support boolean logic
+  across multiple topics. APNs does not have server-side topics, so
+  topic/condition sends are FCM-only. One quota event per topic send
+  regardless of subscriber count. CLI gained `--topic` and
+  `--condition` flags. New `/docs/topics` section.
+
 ### Versioning
 
-- `@edgepush/sdk` 0.1.0 → **0.2.0** (additive, all new fields are
-  optional, no breaking changes)
+- `@edgepush/sdk` 0.1.0 → **0.2.0** (`to` now optional, `topic` +
+  `condition` added, all other new fields are optional, no breaking
+  changes for callers that pass `to`)
 - `@edgepush/cli` 0.1.0 → **0.2.0**
 
 ---

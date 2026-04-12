@@ -10,28 +10,33 @@ If you ship a mobile app and you've ever felt weird about handing your APNs key 
 
 ## Status
 
-**v0.1, launch-ready.** Working end to end, send, dispatch, receipts, webhooks, dashboard, credential health probes, monthly quotas, Stripe billing, nightly backups. APIs may shift before 1.0. See [`CHANGELOG.md`](./CHANGELOG.md) for the full list of what landed and what was deliberately deferred.
+**v0.2, launch-ready.** Full APNs/FCM payload surface (rich images, collapse, voip push types, absolute expiration), FCM topic/condition targeting, webhook retry queue, Stripe Billing Portal, deep health endpoint, 18-section docs. Working end to end. APIs may shift before 1.0. See [`CHANGELOG.md`](./CHANGELOG.md) for the full list.
 
 ## Features
 
 ### Push sending
 - Single `POST /v1/send` endpoint for iOS and Android
 - BYO APNs `.p8` key and FCM service account JSON, encrypted in D1 with AES-GCM
+- Full APNs/FCM payload surface: rich images (`mutableContent` + `image`), `collapseId`, fine-grained `pushType` (alert, background, voip, location, complication, fileprovider, mdm), absolute `expirationAt` timestamps
+- FCM topic and condition targeting: send to all subscribers of a topic or a boolean combination of topics
 - Async dispatch via Cloudflare Queues with automatic retries and a dead letter queue
 - Delivery receipts: poll `GET /v1/receipts/:id` or set a webhook
-- HMAC-signed outbound webhook deliveries
+- HMAC-signed outbound webhook deliveries with a dedicated retry queue (3 retries with backoff, separate DLQ)
 - Per-app token-bucket rate limiting via a Durable Object
 
 ### Observability + reliability
 - Searchable delivery event log with status filter and keyset pagination
 - Active credential health probes: every APNs and FCM credential is authenticated against Apple and Google every 24h; broken creds trigger an email alert before your users notice
 - Dead-letter queue consumer that logs every dead-letter to `worker_errors` for the operator digest
+- Webhook delivery failures logged to `worker_errors` for operator visibility
+- Deep health endpoint (`GET /health/deep`): pings D1, KV, reports killswitch state and queue binding presence, gated on an operator token
 - Daily operator digest email: summary of `worker_errors` by kind, D1 size status, only sent when there's something to report
 - Kill switch KV key the operator can flip from a single `wrangler kv key put` command
 - Operator scripts: `scripts/operator/replay-dlq.ts` and `scripts/operator/inspect-app.ts` for incident response and support workflows
 
 ### Billing (hosted tier)
 - Stripe Checkout with HMAC-signed `client_reference_id` (no cardholder-email-vs-signup-email bug class)
+- Stripe Billing Portal for self-service subscription management (cancel, update payment, view invoices)
 - 5-event webhook handler with idempotency dedup, 5-minute replay window, raw-fetch (no `stripe` npm package)
 - Monthly send counter with atomic reservation, race-safe on concurrent sends at the quota boundary
 - Plan gating via `HOSTED_MODE` env var: `false` means unlimited (self-host), `true` enforces the Free / Pro limits
@@ -39,11 +44,13 @@ If you ship a mobile app and you've ever felt weird about handing your APNs key 
 ### Developer + operator experience
 - Dashboard for app management, credential upload, credential health, recent deliveries, audit log, test sends, account deletion, billing
 - Typed SDK (`@edgepush/sdk`) and CLI (`@edgepush/cli`) published to npm
+- CLI supports the full v0.2 surface: `--image`, `--collapse-id`, `--push-type`, `--topic`, `--condition`, `--mutable-content`, `--expiration-at`, and more
 - GitHub OAuth via Better Auth
 - Scheduled crons for credential probes and operator digest
 - Nightly D1 backup via GitHub Actions with optional AES-256-CBC encryption and R2 upload
 - 70 unit tests covering the cryptographic + response-interpretation logic
-- `SELFHOST.md` full self-host guide + `OPERATOR.md` production runbook
+- 18-section docs at `/docs` with per-section routes (iOS, Android, React Native, rich notifications, FCM topics, error codes, rate limits, webhooks, API keys, and more)
+- `SELFHOST.md` full self-host guide + `OPERATOR.md` production runbook + `CONTRIBUTING.md`
 
 ## Hosted
 
