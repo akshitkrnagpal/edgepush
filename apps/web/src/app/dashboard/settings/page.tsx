@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
+import { api } from "@/lib/api";
 import { authClient } from "@/lib/auth-client";
 import { useDeleteAccount } from "@/lib/queries";
 
@@ -14,6 +15,24 @@ export default function SettingsPage() {
 
   const [profileStatus, setProfileStatus] = useState<string | null>(null);
   const [deleteStatus, setDeleteStatus] = useState<string | null>(null);
+
+  // Billing portal state
+  const [portalPending, setPortalPending] = useState(false);
+  const [portalError, setPortalError] = useState<string | null>(null);
+
+  async function handleManageSubscription() {
+    setPortalError(null);
+    setPortalPending(true);
+    try {
+      const result = await api.createBillingPortal();
+      window.location.href = result.url;
+    } catch (err) {
+      setPortalError(
+        err instanceof Error ? err.message : "failed to open billing portal",
+      );
+      setPortalPending(false);
+    }
+  }
 
   // Delete-account two-step confirmation state.
   // Stage 1: initial "delete_account" button revealed.
@@ -109,6 +128,33 @@ export default function SettingsPage() {
             <span className="text-accent">$</span> save_profile
           </button>
         </form>
+      </section>
+
+      <section className="mb-12 border border-rule-strong bg-surface">
+        <PanelHead title="billing" />
+        <div className="space-y-4 px-6 py-6">
+          <p className="font-sans text-[14px] leading-[1.55] text-muted-strong">
+            Manage your edgepush subscription. View invoices, update your
+            payment method, or cancel your Pro plan. Free-tier users who
+            haven&apos;t upgraded yet can start from the{" "}
+            <a href="/pricing" className="text-text underline decoration-accent underline-offset-4 hover:text-accent">
+              pricing page
+            </a>.
+          </p>
+          {portalError && (
+            <p className="font-mono text-[12px] text-error">
+              <span>●</span> {portalError}
+            </p>
+          )}
+          <button
+            onClick={handleManageSubscription}
+            disabled={portalPending}
+            className="inline-flex items-center gap-2 rounded-none bg-text px-4 py-2.5 font-mono text-[12px] font-semibold text-black hover:bg-accent disabled:opacity-50"
+          >
+            <span className="text-accent">$</span>{" "}
+            {portalPending ? "redirecting..." : "manage_subscription"}
+          </button>
+        </div>
       </section>
 
       <section className="mt-20 border border-accent bg-surface">

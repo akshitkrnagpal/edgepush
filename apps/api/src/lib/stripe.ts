@@ -207,6 +207,50 @@ export async function createCheckoutSession(
   return { url: json.url, sessionId: json.id };
 }
 
+/**
+ * Create a Stripe Billing Portal session. The portal lets the customer
+ * cancel, update their payment method, and view invoices without
+ * emailing the operator.
+ *
+ * Prerequisites: the user must already have a stripeCustomerId (set
+ * when checkout.session.completed fires). Calling this for a user who
+ * never upgraded is a caller error.
+ */
+export async function createBillingPortalSession(
+  env: Pick<Env, "STRIPE_SECRET_KEY">,
+  opts: {
+    customerId: string;
+    returnUrl: string;
+  },
+): Promise<{ url: string }> {
+  if (!env.STRIPE_SECRET_KEY) {
+    throw new Error("Stripe billing is not configured on this deployment");
+  }
+
+  const params = new URLSearchParams();
+  params.set("customer", opts.customerId);
+  params.set("return_url", opts.returnUrl);
+
+  const res = await fetch(`${STRIPE_API}/billing_portal/sessions`, {
+    method: "POST",
+    headers: {
+      authorization: `Bearer ${env.STRIPE_SECRET_KEY}`,
+      "content-type": "application/x-www-form-urlencoded",
+    },
+    body: params.toString(),
+  });
+
+  if (!res.ok) {
+    const body = await res.text().catch(() => "");
+    throw new Error(
+      `Stripe Billing Portal session create failed: ${res.status} ${body.slice(0, 400)}`,
+    );
+  }
+
+  const json = (await res.json()) as { url: string };
+  return { url: json.url };
+}
+
 // ----- Subscription row helpers -----
 
 /**

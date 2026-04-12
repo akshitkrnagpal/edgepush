@@ -209,6 +209,10 @@ export const api = {
     request<{ url: string }>("/api/dashboard/billing/checkout", {
       method: "POST",
     }),
+  createBillingPortal: () =>
+    request<{ url: string }>("/api/dashboard/billing/portal", {
+      method: "POST",
+    }),
   deleteAccount: (confirmEmail: string) =>
     request<{ ok: boolean }>("/api/dashboard/account", {
       method: "DELETE",

@@ -13,6 +13,8 @@
  * │ GET  /subscription               │ Current plan/status for user  │
  * │ POST /checkout                   │ Create a Stripe Checkout      │
  * │                                  │ session and return the URL    │
+ * │ POST /portal                     │ Create a Stripe Billing       │
+ * │                                  │ Portal session (manage sub)   │
  * └──────────────────────────────────┴───────────────────────────────┘
  *
  * Mounted at /api/dashboard/billing via dashboardRouter.route().
@@ -23,6 +25,7 @@ import { Hono } from "hono";
 import { isHosted } from "../lib/mode";
 import { getSessionUser } from "../lib/session";
 import {
+  createBillingPortalSession,
   createCheckoutSession,
   getOrCreateSubscription,
 } from "../lib/stripe";
@@ -112,6 +115,73 @@ billingRouter.post("/checkout", async (c) => {
     return c.json(
       {
         error: "checkout_failed",
+        detail: err instanceof Error ? err.message : "unknown",
+      },
+      502,
+    );
+  }
+});
+
+/**
+ * POST /portal, create a Stripe Billing Portal session so the user
+ * can manage their subscription (cancel, update payment method, view
+ * invoices) without emailing the operator.
+ *
+ * Requires the user to already have a stripeCustomerId (set when
+ * checkout.session.completed fires). Free-tier users who never
+ * upgraded don't have a Stripe customer and get a 409.
+ */
+billingRouter.post("/portal", async (c) => {
+  const user = await getSessionUser(c);
+  if (!user) return c.json({ error: "unauthorized" }, 401);
+
+  if (!isHosted(c.env)) {
+    return c.json(
+      {
+        error: "billing_unavailable",
+        detail:
+          "this edgepush instance is running in self-host mode, no billing portal available",
+      },
+      501,
+    );
+  }
+
+  if (!c.env.STRIPE_SECRET_KEY) {
+    return c.json(
+      {
+        error: "billing_misconfigured",
+        detail: "STRIPE_SECRET_KEY is missing",
+      },
+      500,
+    );
+  }
+
+  const sub = await getOrCreateSubscription(c.var.db, user.id);
+  if (!sub.stripeCustomerId) {
+    return c.json(
+      {
+        error: "no_customer",
+        detail:
+          "you don't have a Stripe customer record yet. upgrade to Pro first, then use the portal to manage your subscription.",
+      },
+      409,
+    );
+  }
+
+  const dashboardUrl = c.env.DASHBOARD_URL ?? "https://edgepush.dev";
+  const returnUrl = `${dashboardUrl}/dashboard/settings`;
+
+  try {
+    const { url } = await createBillingPortalSession(c.env, {
+      customerId: sub.stripeCustomerId,
+      returnUrl,
+    });
+    return c.json({ url });
+  } catch (err) {
+    console.error("[billing] createBillingPortalSession failed:", err);
+    return c.json(
+      {
+        error: "portal_failed",
         detail: err instanceof Error ? err.message : "unknown",
       },
       502,
