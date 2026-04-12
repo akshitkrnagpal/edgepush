@@ -9,5 +9,6 @@
     "jsx": "react-jsx",
     "noEmit": true
   },
-  "include": ["src", "drizzle.config.ts", "worker-configuration.d.ts"]
+  "include": ["src", "drizzle.config.ts", "worker-configuration.d.ts"],
+  "exclude": ["src/integration"]
 }

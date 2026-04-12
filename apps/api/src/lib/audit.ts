@@ -5,6 +5,7 @@ import { generateId } from "./crypto";
 export type AuditAction =
   | "app.created"
   | "app.deleted"
+  | "app.rate_limit_updated"
   | "api_key.created"
   | "api_key.revoked"
   | "apns.updated"

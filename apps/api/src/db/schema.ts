@@ -89,6 +89,8 @@ export const apps = sqliteTable(
       .references(() => user.id, { onDelete: "cascade" }),
     name: text("name").notNull(),
     packageName: text("package_name").notNull(),
+    /** Per-app rate limit override. NULL = use server default (1000/min). */
+    rateLimitPerMinute: integer("rate_limit_per_minute"),
     createdAt: integer("created_at", { mode: "number" }).notNull(),
   },
   (table) => ({
@@ -244,6 +246,7 @@ export const auditLog = sqliteTable(
       enum: [
         "app.created",
         "app.deleted",
+        "app.rate_limit_updated",
         "api_key.created",
         "api_key.revoked",
         "apns.updated",

@@ -87,7 +87,10 @@ sendRouter.post("/send", async (c) => {
     limiterId,
   ) as unknown as DurableObjectStub<RateLimiter>;
 
-  const rateLimit = await limiter.take(msgs.length);
+  const rateLimit = await limiter.take(
+    msgs.length,
+    authedApp.rateLimitPerMinute ?? undefined,
+  );
   if (!rateLimit.allowed) {
     return c.json(
       { error: "rate_limited", retry_after_ms: rateLimit.retryAfterMs },

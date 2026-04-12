@@ -4,6 +4,11 @@
  * Simple token bucket: each app has a bucket that refills at a fixed rate.
  * The DO's state is durable so it survives Worker restarts, but we also
  * keep it in memory for fast access.
+ *
+ * The capacity can be overridden per-app via the `capacity` parameter
+ * to `take()`. When the app's rate_limit_per_minute is NULL in D1,
+ * the caller passes DEFAULT_CAPACITY. When it's set, the caller passes
+ * the stored value.
  */
 
 import { DurableObject } from "cloudflare:workers";
@@ -11,31 +16,42 @@ import { DurableObject } from "cloudflare:workers";
 interface Bucket {
   tokens: number;
   lastRefillAt: number;
+  capacity: number;
 }
 
-const DEFAULT_CAPACITY = 1000; // max burst per minute
-const DEFAULT_REFILL_PER_SECOND = 1000 / 60; // ~16.67/s
+export const DEFAULT_CAPACITY = 1000; // max burst per minute
 
 export class RateLimiter extends DurableObject {
   private bucket: Bucket | null = null;
 
-  async take(amount: number): Promise<{ allowed: boolean; retryAfterMs: number }> {
+  async take(
+    amount: number,
+    capacity: number = DEFAULT_CAPACITY,
+  ): Promise<{ allowed: boolean; retryAfterMs: number }> {
+    const refillPerSecond = capacity / 60;
     const now = Date.now();
+
     if (!this.bucket) {
       const stored = await this.ctx.storage.get<Bucket>("bucket");
       this.bucket = stored ?? {
-        tokens: DEFAULT_CAPACITY,
+        tokens: capacity,
         lastRefillAt: now,
+        capacity,
       };
+    }
+
+    // If the configured capacity changed (operator or user updated the
+    // rate limit), adjust the bucket on the fly. The bucket's max fills
+    // to the new capacity and any excess tokens are trimmed.
+    if (this.bucket.capacity !== capacity) {
+      this.bucket.capacity = capacity;
+      this.bucket.tokens = Math.min(this.bucket.tokens, capacity);
     }
 
     // Refill
     const elapsedSec = (now - this.bucket.lastRefillAt) / 1000;
-    const refilled = elapsedSec * DEFAULT_REFILL_PER_SECOND;
-    this.bucket.tokens = Math.min(
-      DEFAULT_CAPACITY,
-      this.bucket.tokens + refilled,
-    );
+    const refilled = elapsedSec * refillPerSecond;
+    this.bucket.tokens = Math.min(capacity, this.bucket.tokens + refilled);
     this.bucket.lastRefillAt = now;
 
     if (this.bucket.tokens >= amount) {
@@ -45,9 +61,7 @@ export class RateLimiter extends DurableObject {
     }
 
     const deficit = amount - this.bucket.tokens;
-    const retryAfterMs = Math.ceil(
-      (deficit / DEFAULT_REFILL_PER_SECOND) * 1000,
-    );
+    const retryAfterMs = Math.ceil((deficit / refillPerSecond) * 1000);
     return { allowed: false, retryAfterMs };
   }
 }

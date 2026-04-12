@@ -914,6 +914,52 @@ dashboardRouter.post("/apps/:id/test-push", async (c) => {
   return c.json({ id });
 });
 
+// --- Rate limit configuration ---
+
+const RateLimitSchema = z.object({
+  rateLimitPerMinute: z.number().int().min(10).max(100000).nullable(),
+});
+
+dashboardRouter.put("/apps/:id/rate-limit", async (c) => {
+  const user = await getSessionUser(c);
+  if (!user) return c.json({ error: "unauthorized" }, 401);
+
+  const appId = c.req.param("id");
+  const app = await c.var.db
+    .select()
+    .from(apps)
+    .where(and(eq(apps.id, appId), eq(apps.userId, user.id)))
+    .limit(1)
+    .then((rows) => rows[0] ?? null);
+  if (!app) return c.json({ error: "not_found" }, 404);
+
+  const parseResult = RateLimitSchema.safeParse(await c.req.json());
+  if (!parseResult.success) {
+    return c.json(
+      { error: "invalid_request", issues: parseResult.error.issues },
+      400,
+    );
+  }
+
+  const { rateLimitPerMinute } = parseResult.data;
+
+  await c.var.db
+    .update(apps)
+    .set({ rateLimitPerMinute })
+    .where(eq(apps.id, appId));
+
+  await logAudit(c.var.db, {
+    appId,
+    userId: user.id,
+    action: "app.rate_limit_updated",
+    metadata: {
+      rateLimitPerMinute: rateLimitPerMinute ?? "default",
+    },
+  });
+
+  return c.json({ ok: true, rateLimitPerMinute });
+});
+
 // --- Audit log ---
 
 dashboardRouter.get("/apps/:id/audit", async (c) => {

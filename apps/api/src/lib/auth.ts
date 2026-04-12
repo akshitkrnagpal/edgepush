@@ -15,6 +15,7 @@ export interface AuthedApp {
   userId: string;
   packageName: string;
   apiKeyId: string;
+  rateLimitPerMinute: number | null;
 }
 
 export async function authenticateApiKey(
@@ -35,6 +36,7 @@ export async function authenticateApiKey(
       appId: apps.id,
       userId: apps.userId,
       packageName: apps.packageName,
+      rateLimitPerMinute: apps.rateLimitPerMinute,
       revokedAt: apiKeys.revokedAt,
     })
     .from(apiKeys)
@@ -62,5 +64,6 @@ export async function authenticateApiKey(
     appId: row.appId,
     userId: row.userId,
     packageName: row.packageName,
+    rateLimitPerMinute: row.rateLimitPerMinute,
   };
 }
