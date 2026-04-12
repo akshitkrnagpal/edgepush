@@ -582,8 +582,12 @@ function RateLimitsContent() {
 }`}</Code>
       <p className="mt-4">
         Wait <span className="font-mono text-text">retry_after_ms</span>{" "}
-        and resend. Self-hosters can tune the limit by editing{" "}
-        <span className="font-mono text-text">DEFAULT_CAPACITY</span> in{" "}
+        and resend. The limit is configurable per app via{" "}
+        <span className="font-mono text-text">
+          PUT /api/dashboard/apps/:id/rate-limit
+        </span>{" "}
+        (10 to 100,000 events/min, or null to reset to default). Self-hosters
+        can also change the server-wide default in{" "}
         <span className="font-mono text-text">apps/api/src/rate-limiter.ts</span>.
       </p>
       <h3 className="mt-6 mb-3 font-mono text-[14px] font-bold text-text">

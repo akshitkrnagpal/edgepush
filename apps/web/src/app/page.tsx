@@ -627,7 +627,7 @@ export default function Home() {
               />
               <CompareRow
                 label="hard rate ceiling"
-                values={["per-app, tunable", "600/sec global", "n/a", "n/a"]}
+                values={["per-app, configurable", "600/sec global", "n/a", "n/a"]}
               />
               <CompareRow
                 label="runs on cloudflare workers"
