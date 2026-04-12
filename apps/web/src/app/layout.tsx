@@ -19,7 +19,7 @@ export const metadata: Metadata = {
     template: "%s, edgepush",
   },
   description:
-    "Open source alternative to Expo Push Notification Service. Send native iOS and Android pushes through a single API, deployed on Cloudflare Workers. Free, MIT licensed.",
+    "Open source push notifications for iOS and Android. One API on Cloudflare Workers, BYO APNs + FCM credentials, encrypted at rest. Free hosted tier or self-host on your own account.",
   keywords: [
     "push notifications",
     "APNs",
@@ -42,14 +42,14 @@ export const metadata: Metadata = {
     siteName: "edgepush",
     title: "edgepush. Open source push notifications at the edge",
     description:
-      "Open source alternative to Expo Push Notification Service. Built on Cloudflare Workers.",
+      "One API for iOS + Android push. BYO credentials, encrypted in D1, deployed on Cloudflare Workers.",
     locale: "en_US",
   },
   twitter: {
     card: "summary_large_image",
     title: "edgepush. Open source push notifications at the edge",
     description:
-      "Open source alternative to Expo Push Notification Service. Built on Cloudflare Workers.",
+      "One API for iOS + Android push. BYO credentials, encrypted in D1, deployed on Cloudflare Workers.",
     creator: "@akshit_io",
   },
   alternates: {
