@@ -14,14 +14,14 @@
   },
   "dependencies": {
     "@edgepush/shared": "workspace:*",
-    "@tanstack/react-query": "^5.97.0",
+    "@tanstack/react-query": "^5.99.0",
     "better-auth": "^1.6.2",
     "next": "16.2.3",
-    "react": "19.2.4",
-    "react-dom": "19.2.4"
+    "react": "19.2.5",
+    "react-dom": "19.2.5"
   },
   "devDependencies": {
-    "@opennextjs/cloudflare": "^1.19.0",
+    "@opennextjs/cloudflare": "^1.19.1",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
     "@types/react": "^19",
