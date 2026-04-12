@@ -157,17 +157,16 @@ async function processAppBatch(
 
     // Fire webhook if configured and enabled.
     //
-    // Failure handling: webhook failures don't block the push from being
-    // acked (the delivery to APNs/FCM already happened, the webhook is a
-    // separate observability channel). But they DO get logged to
-    // worker_errors so the operator digest surfaces them.
+    // First attempt is inline (fast path for healthy endpoints). If the
+    // first attempt fails, enqueue the job into WEBHOOK_QUEUE for retry
+    // with backoff. The webhook queue consumer handles 3 retries; after
+    // that, jobs land in edgepush-webhook-dlq where they're logged to
+    // worker_errors for the operator digest.
     //
-    // Followup: real retry semantics belong in a dedicated webhook queue
-    // (separate from the push dispatch queue) so transient customer
-    // outages don't get dropped on the first failure. For now, single
-    // attempt + observability is the minimal correct behavior.
+    // This keeps the push dispatch consumer fast (no inline retry loop)
+    // while giving transient webhook failures a fair retry window.
     if (webhook?.enabled) {
-      const payload: WebhookPayload = {
+      const webhookPayload: WebhookPayload = {
         event: nextStatus === "delivered" ? "message.delivered" : "message.failed",
         messageId: row.id,
         appId,
@@ -176,38 +175,52 @@ async function processAppBatch(
         tokenInvalid: result.tokenInvalid ?? false,
         timestamp: Date.now(),
       };
+
+      let firstAttemptOk = false;
       try {
         const webhookResult = await dispatchWebhook(
           webhook.url,
           webhook.secret,
-          payload,
+          webhookPayload,
         );
-        if (!webhookResult.ok) {
+        firstAttemptOk = webhookResult.ok;
+      } catch {
+        // Network error on first attempt. Will enqueue for retry below.
+      }
+
+      // Enqueue for retry if the first attempt failed. The webhook
+      // queue consumer will retry with Cloudflare's built-in backoff.
+      if (!firstAttemptOk) {
+        try {
+          await env.WEBHOOK_QUEUE.send({
+            url: webhook.url,
+            secret: webhook.secret,
+            payload: webhookPayload,
+            attempt: 1,
+          });
+        } catch (enqueueErr) {
+          // If even the enqueue fails (queue binding down), log to
+          // worker_errors as a last resort. The webhook is lost but
+          // the operator will see it in the digest.
+          console.error(
+            `[dispatch] webhook enqueue failed for ${row.id}:`,
+            enqueueErr,
+          );
           await logWorkerError(db, {
             kind: "webhook",
             payload: {
               messageId: row.id,
               appId,
-              event: payload.event,
+              event: webhookPayload.event,
               url: webhook.url,
-              status: webhookResult.status,
-              reason: "non_2xx",
+              reason: "enqueue_failed",
+              error:
+                enqueueErr instanceof Error
+                  ? enqueueErr.message
+                  : String(enqueueErr),
             },
           });
         }
-      } catch (err) {
-        console.error(`[dispatch] webhook threw for ${row.id}:`, err);
-        await logWorkerError(db, {
-          kind: "webhook",
-          payload: {
-            messageId: row.id,
-            appId,
-            event: payload.event,
-            url: webhook.url,
-            reason: "threw",
-            error: err instanceof Error ? err.message : String(err),
-          },
-        });
       }
     }
 

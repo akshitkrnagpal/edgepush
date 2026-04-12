@@ -9,8 +9,9 @@ import { dashboardRouter } from "./routes/dashboard";
 import { receiptsRouter } from "./routes/receipts";
 import { sendRouter } from "./routes/send";
 import { stripeWebhookRouter } from "./routes/webhooks/stripe";
-import type { AppContext, DispatchJob, Env } from "./types";
+import type { AppContext, DispatchJob, Env, WebhookJob } from "./types";
 import { SERVER_VERSION } from "./version";
+import { handleWebhookQueue, handleWebhookDlq } from "./webhook-consumer";
 
 export { RateLimiter } from "./rate-limiter";
 
@@ -200,17 +201,38 @@ app.route("/v1", stripeWebhookRouter);
 
 export default {
   fetch: app.fetch,
-  async queue(batch: MessageBatch<DispatchJob>, env: Env): Promise<void> {
+  async queue(
+    batch: MessageBatch<DispatchJob | WebhookJob>,
+    env: Env,
+  ): Promise<void> {
     // Workers dispatches all queue consumers through a single queue()
-    // export, keyed on `batch.queue`. We branch by queue name so the
-    // dead-letter queue can have its own handler (observability-only:
-    // logs every dead-letter to worker_errors and acks) without a
-    // second worker.
-    if (batch.queue === "edgepush-dispatch-dlq") {
-      await handleDlq(batch, env);
-      return;
+    // export, keyed on `batch.queue`. We branch by queue name so each
+    // queue gets its own handler without a second worker.
+    switch (batch.queue) {
+      case "edgepush-dispatch":
+        await handleQueue(
+          batch as MessageBatch<DispatchJob>,
+          env,
+        );
+        return;
+      case "edgepush-dispatch-dlq":
+        await handleDlq(batch as MessageBatch<DispatchJob>, env);
+        return;
+      case "edgepush-webhook":
+        await handleWebhookQueue(
+          batch as MessageBatch<WebhookJob>,
+          env,
+        );
+        return;
+      case "edgepush-webhook-dlq":
+        await handleWebhookDlq(
+          batch as MessageBatch<WebhookJob>,
+          env,
+        );
+        return;
+      default:
+        console.warn(`[queue] unknown queue: ${batch.queue}`);
     }
-    await handleQueue(batch, env);
   },
   async scheduled(
     event: ScheduledEvent,

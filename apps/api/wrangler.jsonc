@@ -50,6 +50,10 @@
       {
         "queue": "edgepush-dispatch",
         "binding": "DISPATCH_QUEUE"
+      },
+      {
+        "queue": "edgepush-webhook",
+        "binding": "WEBHOOK_QUEUE"
       }
     ],
     "consumers": [
@@ -62,6 +66,19 @@
       },
       {
         "queue": "edgepush-dispatch-dlq",
+        "max_batch_size": 50,
+        "max_batch_timeout": 30,
+        "max_retries": 1
+      },
+      {
+        "queue": "edgepush-webhook",
+        "max_batch_size": 50,
+        "max_batch_timeout": 5,
+        "max_retries": 3,
+        "dead_letter_queue": "edgepush-webhook-dlq"
+      },
+      {
+        "queue": "edgepush-webhook-dlq",
         "max_batch_size": 50,
         "max_batch_timeout": 30,
         "max_retries": 1

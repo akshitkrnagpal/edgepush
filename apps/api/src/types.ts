@@ -4,6 +4,7 @@ export interface Env {
   DB: D1Database;
   CACHE: KVNamespace;
   DISPATCH_QUEUE: Queue<DispatchJob>;
+  WEBHOOK_QUEUE: Queue<WebhookJob>;
   RATE_LIMITER: DurableObjectNamespace;
 
   BETTER_AUTH_URL: string;
@@ -65,4 +66,19 @@ export interface AppContext {
 export interface DispatchJob {
   messageId: string;
   appId: string;
+}
+
+export interface WebhookJob {
+  url: string;
+  secret: string;
+  payload: {
+    event: string;
+    messageId: string;
+    appId: string;
+    status: string;
+    error?: string | null;
+    tokenInvalid?: boolean;
+    timestamp: number;
+  };
+  attempt: number;
 }
