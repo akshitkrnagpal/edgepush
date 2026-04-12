@@ -17,8 +17,9 @@ jobs:
       - uses: actions/checkout@v4
 
       - uses: pnpm/action-setup@v4
-        with:
-          version: 10
+        # Version is read from packageManager in package.json.
+        # Do NOT set `version:` here or pnpm/action-setup will error
+        # with "Multiple versions of pnpm specified".
 
       - uses: actions/setup-node@v4
         with:
