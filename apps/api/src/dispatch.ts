@@ -103,7 +103,10 @@ async function processAppBatch(
 
     try {
       const payload = JSON.parse(row.payloadJson) as PushMessage;
-      if (row.platform === "ios") {
+      // Topic/condition sends are FCM-only and have no device token.
+      const isBroadcast = !!payload.topic || !!payload.condition;
+
+      if (row.platform === "ios" && !isBroadcast) {
         if (!apnsCreds) {
           result = { ok: false, error: "APNs credentials not configured" };
         } else {
@@ -113,7 +116,11 @@ async function processAppBatch(
         if (!fcmCreds) {
           result = { ok: false, error: "FCM credentials not configured" };
         } else {
-          result = await dispatchFcm(fcmCreds, row.to, payload);
+          // For token sends, row.to is the device token. For topic/
+          // condition sends, row.to stores the topic/condition string
+          // for logging, and the actual target is in the payload.
+          const deviceToken = isBroadcast ? null : row.to;
+          result = await dispatchFcm(fcmCreds, deviceToken, payload);
         }
       }
     } catch (err) {

@@ -2,8 +2,23 @@
  * Push notification message. Maps cleanly to both APNs and FCM payloads.
  */
 export interface PushMessage {
-  /** Platform-native device token. APNs hex string or FCM registration token. */
-  to: string;
+  /**
+   * Platform-native device token. APNs hex string or FCM registration
+   * token. Required for single-device sends. Omit when using `topic`
+   * or `condition`.
+   */
+  to?: string;
+  /**
+   * FCM topic name (without "/topics/" prefix). Sends to all devices
+   * subscribed to the topic. Mutually exclusive with `to` and `condition`.
+   */
+  topic?: string;
+  /**
+   * FCM condition expression. Example:
+   * `"'TopicA' in topics && 'TopicB' in topics"`.
+   * Mutually exclusive with `to` and `topic`.
+   */
+  condition?: string;
   /** Platform hint. If omitted, edgepush will route based on token format. */
   platform?: "ios" | "android";
   /** Notification title shown in the banner. */

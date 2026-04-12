@@ -80,7 +80,7 @@ export interface FcmDispatchResult {
 
 export async function dispatchFcm(
   creds: FcmCredentials,
-  deviceToken: string,
+  deviceToken: string | null,
   message: PushMessage,
 ): Promise<FcmDispatchResult> {
   const accessToken = await getAccessToken(creds);
@@ -107,8 +107,18 @@ export async function dispatchFcm(
     androidTtl = `${message.ttl}s`;
   }
 
+  // FCM target: exactly one of token, topic, or condition.
+  const target: Record<string, string> = {};
+  if (message.topic) {
+    target.topic = message.topic;
+  } else if (message.condition) {
+    target.condition = message.condition;
+  } else if (deviceToken) {
+    target.token = deviceToken;
+  }
+
   const fcmMessage: Record<string, unknown> = {
-    token: deviceToken,
+    ...target,
     notification:
       message.title || message.body
         ? {

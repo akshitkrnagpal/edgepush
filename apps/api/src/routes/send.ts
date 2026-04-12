@@ -131,12 +131,19 @@ sendRouter.post("/send", async (c) => {
 
   for (const msg of msgs) {
     const id = generateId();
-    const platform = msg.platform ?? inferPlatform(msg.to);
+
+    // Determine target and platform. Topic/condition sends are always
+    // Android (FCM-only). Token sends infer from format.
+    const target = msg.to ?? msg.topic ?? msg.condition ?? "";
+    const isBroadcast = !msg.to;
+    const platform = isBroadcast
+      ? "android"
+      : (msg.platform ?? inferPlatform(msg.to!));
 
     rows.push({
       id,
       appId: authedApp.appId,
-      to: msg.to,
+      to: target,
       platform,
       title: msg.title ?? null,
       body: msg.body ?? null,

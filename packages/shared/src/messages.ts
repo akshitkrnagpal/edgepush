@@ -5,8 +5,24 @@ import { z } from "zod";
  * Maps cleanly to both APNs and FCM payloads.
  */
 export const PushMessageSchema = z.object({
-  /** Platform-native device token. APNs hex string or FCM registration token. */
-  to: z.string().min(1),
+  /**
+   * Platform-native device token. APNs hex string or FCM registration
+   * token. Required for single-device sends. Omit when using `topic`
+   * or `condition` (FCM-only broadcast).
+   */
+  to: z.string().min(1).optional(),
+  /**
+   * FCM topic name (without the "/topics/" prefix). Sends to all devices
+   * subscribed to this topic. Mutually exclusive with `to` and `condition`.
+   * APNs does not support server-side topics.
+   */
+  topic: z.string().min(1).max(256).optional(),
+  /**
+   * FCM condition expression for targeting multiple topics. Example:
+   * `"'TopicA' in topics && ('TopicB' in topics || 'TopicC' in topics)"`.
+   * Mutually exclusive with `to` and `topic`. APNs does not support this.
+   */
+  condition: z.string().min(1).max(1024).optional(),
   /** Platform hint. If omitted, edgepush will route based on token format. */
   platform: z.enum(["ios", "android"]).optional(),
   /** Notification title shown in the banner. */
@@ -82,7 +98,16 @@ export const PushMessageSchema = z.object({
       "mdm",
     ])
     .optional(),
-});
+}).refine(
+  (msg) => {
+    const targets = [msg.to, msg.topic, msg.condition].filter(Boolean);
+    return targets.length === 1;
+  },
+  {
+    message:
+      "exactly one of `to`, `topic`, or `condition` must be set (they are mutually exclusive)",
+  },
+);
 
 export type PushMessage = z.infer<typeof PushMessageSchema>;
 
