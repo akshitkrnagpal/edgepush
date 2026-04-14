@@ -1,0 +1,182 @@
+---
+import Base from "../../layouts/Base.astro";
+---
+
+<Base title="Terms of Service, edgepush" description="edgepush terms of service. Usage rules, uptime expectations, and open source licensing.">
+  <main class="flex-1 font-sans">
+    <nav class="mx-auto flex max-w-[1440px] items-center justify-between border-b border-rule px-6 py-5">
+      <a
+        href="/"
+        class="flex items-center gap-2.5 font-mono text-[15px] font-bold text-text"
+      >
+        <span class="relative flex h-[22px] w-[22px] items-center justify-center border border-accent font-mono text-[11px] font-extrabold text-accent">
+          ep
+        </span>
+        edgepush
+      </a>
+      <div class="flex items-center gap-3 font-mono text-[12px] uppercase tracking-[0.1em]">
+        <a
+          href="https://app.edgepush.dev/sign-in"
+          class="rounded-none border border-rule-strong px-4 py-2 font-semibold text-text hover:border-text"
+        >
+          sign_in
+        </a>
+      </div>
+    </nav>
+
+    <article class="mx-auto max-w-[780px] px-6 py-16">
+      <div class="mb-3 font-mono text-[11px] uppercase tracking-[0.14em] text-muted">
+        <span class="text-accent">─&nbsp;</span> legal / terms
+      </div>
+      <h1 class="mb-2 font-mono text-[40px] font-extrabold leading-[1.02] tracking-[-0.03em] text-text">
+        terms of service.
+      </h1>
+      <p class="mb-14 font-mono text-[11px] uppercase tracking-[0.12em] text-muted">
+        last updated: 2026-04-10
+      </p>
+
+      <!-- acceptance -->
+      <section class="mb-12">
+        <h2 class="mb-4 font-mono text-[18px] font-bold uppercase tracking-[0.04em] text-text">
+          <span class="text-accent">├&nbsp;</span>
+          acceptance
+        </h2>
+        <div class="space-y-4 font-sans text-[15px] leading-[1.65] text-muted-strong">
+          By using the hosted edgepush service, you agree to these terms. If
+          you do not agree, do not use the service.
+        </div>
+      </section>
+
+      <!-- the service -->
+      <section class="mb-12">
+        <h2 class="mb-4 font-mono text-[18px] font-bold uppercase tracking-[0.04em] text-text">
+          <span class="text-accent">├&nbsp;</span>
+          the service
+        </h2>
+        <div class="space-y-4 font-sans text-[15px] leading-[1.65] text-muted-strong">
+          edgepush is an open source push notification relay. The hosted
+          version is provided free of charge as a convenience for users who do
+          not want to self-host. No SLA is offered.
+        </div>
+      </section>
+
+      <!-- your responsibilities -->
+      <section class="mb-12">
+        <h2 class="mb-4 font-mono text-[18px] font-bold uppercase tracking-[0.04em] text-text">
+          <span class="text-accent">├&nbsp;</span>
+          your responsibilities
+        </h2>
+        <div class="space-y-4 font-sans text-[15px] leading-[1.65] text-muted-strong">
+          <ul class="list-none space-y-3">
+            <li>
+              <span class="text-accent">● </span>
+              You are responsible for keeping your account credentials secure.
+            </li>
+            <li>
+              <span class="text-accent">● </span>
+              You must not send spam, phishing, or any unsolicited or deceptive
+              messages to end users.
+            </li>
+            <li>
+              <span class="text-accent">● </span>
+              You must comply with Apple APNs and Google FCM terms of service
+              when sending messages through their networks.
+            </li>
+            <li>
+              <span class="text-accent">● </span>
+              You must not attempt to reverse-engineer, abuse, or overload the
+              service.
+            </li>
+            <li>
+              <span class="text-accent">● </span>
+              You are responsible for obtaining consent from end users before
+              sending them push notifications where required by law.
+            </li>
+          </ul>
+        </div>
+      </section>
+
+      <!-- open source -->
+      <section class="mb-12">
+        <h2 class="mb-4 font-mono text-[18px] font-bold uppercase tracking-[0.04em] text-text">
+          <span class="text-accent">├&nbsp;</span>
+          open source
+        </h2>
+        <div class="space-y-4 font-sans text-[15px] leading-[1.65] text-muted-strong">
+          edgepush is dual-licensed. The server and dashboard are AGPL-3.0. The
+          SDK and CLI are MIT. You may self-host, modify, and redistribute
+          the code under the applicable license. See COMMERCIAL.md in the
+          GitHub repository for the dual-license details.
+        </div>
+      </section>
+
+      <!-- warranty disclaimer -->
+      <section class="mb-12">
+        <h2 class="mb-4 font-mono text-[18px] font-bold uppercase tracking-[0.04em] text-text">
+          <span class="text-accent">├&nbsp;</span>
+          warranty disclaimer
+        </h2>
+        <div class="space-y-4 font-sans text-[15px] leading-[1.65] text-muted-strong">
+          edgepush is provided &quot;as is&quot; without warranty of any kind.
+          We do not warrant that the service will be uninterrupted, error-free,
+          or secure. You use the service at your own risk.
+        </div>
+      </section>
+
+      <!-- limitation of liability -->
+      <section class="mb-12">
+        <h2 class="mb-4 font-mono text-[18px] font-bold uppercase tracking-[0.04em] text-text">
+          <span class="text-accent">├&nbsp;</span>
+          limitation of liability
+        </h2>
+        <div class="space-y-4 font-sans text-[15px] leading-[1.65] text-muted-strong">
+          To the maximum extent permitted by law, edgepush and its authors
+          shall not be liable for any indirect, incidental, special, or
+          consequential damages arising from your use of the service. This
+          includes but is not limited to lost messages, lost data, and lost
+          revenue.
+        </div>
+      </section>
+
+      <!-- termination -->
+      <section class="mb-12">
+        <h2 class="mb-4 font-mono text-[18px] font-bold uppercase tracking-[0.04em] text-text">
+          <span class="text-accent">├&nbsp;</span>
+          termination
+        </h2>
+        <div class="space-y-4 font-sans text-[15px] leading-[1.65] text-muted-strong">
+          We may suspend or terminate your access at any time for any reason
+          including, without limitation, abuse, spam, or violation of these
+          terms.
+        </div>
+      </section>
+
+      <!-- changes -->
+      <section class="mb-12">
+        <h2 class="mb-4 font-mono text-[18px] font-bold uppercase tracking-[0.04em] text-text">
+          <span class="text-accent">├&nbsp;</span>
+          changes
+        </h2>
+        <div class="space-y-4 font-sans text-[15px] leading-[1.65] text-muted-strong">
+          We may update these terms from time to time. Continued use of the
+          service after changes constitutes acceptance of the new terms.
+        </div>
+      </section>
+
+      <!-- contact -->
+      <section class="mb-12">
+        <h2 class="mb-4 font-mono text-[18px] font-bold uppercase tracking-[0.04em] text-text">
+          <span class="text-accent">├&nbsp;</span>
+          contact
+        </h2>
+        <div class="space-y-4 font-sans text-[15px] leading-[1.65] text-muted-strong">
+          Questions? Email
+          <a
+            href="mailto:contact@edgepush.dev"
+            class="text-text underline decoration-accent underline-offset-4 hover:text-accent"
+          >contact@edgepush.dev</a>.
+        </div>
+      </section>
+    </article>
+  </main>
+</Base>

@@ -1,0 +1,194 @@
+---
+import Base from "../../layouts/Base.astro";
+---
+
+<Base title="Privacy Policy, edgepush" description="edgepush privacy policy. What data we collect, how we use it, and how to delete your account.">
+  <main class="flex-1 font-sans">
+    <nav class="mx-auto flex max-w-[1440px] items-center justify-between border-b border-rule px-6 py-5">
+      <a
+        href="/"
+        class="flex items-center gap-2.5 font-mono text-[15px] font-bold text-text"
+      >
+        <span class="relative flex h-[22px] w-[22px] items-center justify-center border border-accent font-mono text-[11px] font-extrabold text-accent">
+          ep
+        </span>
+        edgepush
+      </a>
+      <div class="flex items-center gap-3 font-mono text-[12px] uppercase tracking-[0.1em]">
+        <a
+          href="https://app.edgepush.dev/sign-in"
+          class="rounded-none border border-rule-strong px-4 py-2 font-semibold text-text hover:border-text"
+        >
+          sign_in
+        </a>
+      </div>
+    </nav>
+
+    <article class="mx-auto max-w-[780px] px-6 py-16">
+      <div class="mb-3 font-mono text-[11px] uppercase tracking-[0.14em] text-muted">
+        <span class="text-accent">─&nbsp;</span> legal / privacy
+      </div>
+      <h1 class="mb-2 font-mono text-[40px] font-extrabold leading-[1.02] tracking-[-0.03em] text-text">
+        privacy policy.
+      </h1>
+      <p class="mb-14 font-mono text-[11px] uppercase tracking-[0.12em] text-muted">
+        last updated: 2026-04-10
+      </p>
+
+      <!-- overview -->
+      <section class="mb-12">
+        <h2 class="mb-4 font-mono text-[18px] font-bold uppercase tracking-[0.04em] text-text">
+          <span class="text-accent">├&nbsp;</span>
+          overview
+        </h2>
+        <div class="space-y-4 font-sans text-[15px] leading-[1.65] text-muted-strong">
+          edgepush is an open source push notification service. This policy
+          explains what data we collect when you use the hosted version, how it
+          is stored, and your rights regarding that data. If you self-host
+          edgepush, this policy does not apply, your data stays in your own
+          Cloudflare account.
+        </div>
+      </section>
+
+      <!-- what we collect -->
+      <section class="mb-12">
+        <h2 class="mb-4 font-mono text-[18px] font-bold uppercase tracking-[0.04em] text-text">
+          <span class="text-accent">├&nbsp;</span>
+          what we collect
+        </h2>
+        <div class="space-y-4 font-sans text-[15px] leading-[1.65] text-muted-strong">
+          <ul class="list-none space-y-3">
+            <li>
+              <span class="text-accent">● </span>
+              <span class="font-mono text-[13px] font-semibold uppercase tracking-[0.06em] text-text">account information: </span>
+              name and GitHub profile details you authorize during sign in. We
+              do not store passwords.
+            </li>
+            <li>
+              <span class="text-accent">● </span>
+              <span class="font-mono text-[13px] font-semibold uppercase tracking-[0.06em] text-text">app metadata: </span>
+              names, package identifiers, and creation timestamps for the apps
+              you register.
+            </li>
+            <li>
+              <span class="text-accent">● </span>
+              <span class="font-mono text-[13px] font-semibold uppercase tracking-[0.06em] text-text">push credentials: </span>
+              APNs .p8 keys and FCM service account JSONs you upload. Encrypted
+              at rest with AES-GCM using a key we never expose via the API.
+            </li>
+            <li>
+              <span class="text-accent">● </span>
+              <span class="font-mono text-[13px] font-semibold uppercase tracking-[0.06em] text-text">push message metadata: </span>
+              device tokens, titles, bodies, timestamps, and delivery status.
+              Retained for 30 days.
+            </li>
+            <li>
+              <span class="text-accent">● </span>
+              <span class="font-mono text-[13px] font-semibold uppercase tracking-[0.06em] text-text">api key hashes: </span>
+              we store a SHA-256 hash of each API key, never the raw value. Raw
+              keys are shown once at creation and cannot be recovered.
+            </li>
+          </ul>
+        </div>
+      </section>
+
+      <!-- what we do not collect -->
+      <section class="mb-12">
+        <h2 class="mb-4 font-mono text-[18px] font-bold uppercase tracking-[0.04em] text-text">
+          <span class="text-accent">├&nbsp;</span>
+          what we do not collect
+        </h2>
+        <div class="space-y-4 font-sans text-[15px] leading-[1.65] text-muted-strong">
+          <ul class="list-none space-y-3">
+            <li>
+              <span class="text-accent">● </span>
+              contents of end-user devices or app data
+            </li>
+            <li>
+              <span class="text-accent">● </span>
+              advertising identifiers
+            </li>
+            <li>
+              <span class="text-accent">● </span>
+              behavioral analytics beyond what is necessary to operate the
+              service
+            </li>
+          </ul>
+        </div>
+      </section>
+
+      <!-- how data is stored -->
+      <section class="mb-12">
+        <h2 class="mb-4 font-mono text-[18px] font-bold uppercase tracking-[0.04em] text-text">
+          <span class="text-accent">├&nbsp;</span>
+          how data is stored
+        </h2>
+        <div class="space-y-4 font-sans text-[15px] leading-[1.65] text-muted-strong">
+          All data is stored on Cloudflare infrastructure (D1, KV, Queues, R2).
+          Credentials are encrypted before they are written to D1. Push message
+          metadata is kept for 30 days, then automatically deleted.
+        </div>
+      </section>
+
+      <!-- third parties -->
+      <section class="mb-12">
+        <h2 class="mb-4 font-mono text-[18px] font-bold uppercase tracking-[0.04em] text-text">
+          <span class="text-accent">├&nbsp;</span>
+          third parties
+        </h2>
+        <div class="space-y-4 font-sans text-[15px] leading-[1.65] text-muted-strong">
+          edgepush forwards push messages to Apple Push Notification Service
+          (APNs) and Firebase Cloud Messaging (FCM) using the credentials you
+          supply. Apple and Google are independent data controllers for their
+          own services.
+        </div>
+      </section>
+
+      <!-- your rights -->
+      <section class="mb-12">
+        <h2 class="mb-4 font-mono text-[18px] font-bold uppercase tracking-[0.04em] text-text">
+          <span class="text-accent">├&nbsp;</span>
+          your rights
+        </h2>
+        <div class="space-y-4 font-sans text-[15px] leading-[1.65] text-muted-strong">
+          You can delete your account and all associated data at any time from
+          the dashboard. You can request an export of your data by emailing
+          <a
+            href="mailto:contact@edgepush.dev"
+            class="text-text underline decoration-accent underline-offset-4 hover:text-accent"
+          >contact@edgepush.dev</a>.
+          If you are in the EU, UK, or California, you have additional
+          rights under GDPR and CCPA including access, correction, deletion,
+          and portability.
+        </div>
+      </section>
+
+      <!-- changes -->
+      <section class="mb-12">
+        <h2 class="mb-4 font-mono text-[18px] font-bold uppercase tracking-[0.04em] text-text">
+          <span class="text-accent">├&nbsp;</span>
+          changes
+        </h2>
+        <div class="space-y-4 font-sans text-[15px] leading-[1.65] text-muted-strong">
+          We may update this policy from time to time. Material changes will be
+          announced in the dashboard and on this page.
+        </div>
+      </section>
+
+      <!-- contact -->
+      <section class="mb-12">
+        <h2 class="mb-4 font-mono text-[18px] font-bold uppercase tracking-[0.04em] text-text">
+          <span class="text-accent">├&nbsp;</span>
+          contact
+        </h2>
+        <div class="space-y-4 font-sans text-[15px] leading-[1.65] text-muted-strong">
+          Questions? Email
+          <a
+            href="mailto:contact@edgepush.dev"
+            class="text-text underline decoration-accent underline-offset-4 hover:text-accent"
+          >contact@edgepush.dev</a>.
+        </div>
+      </section>
+    </article>
+  </main>
+</Base>

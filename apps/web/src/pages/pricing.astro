@@ -1,0 +1,247 @@
+---
+/**
+ * Pricing page for edgepush (marketing site).
+ *
+ * This is a static page on apps/web. The "upgrade to pro" CTA links
+ * to the app domain (apps/app) where the actual checkout happens.
+ */
+
+import Base from "../layouts/Base.astro";
+
+const APP_URL = "https://app.edgepush.dev";
+
+const breadcrumbs = [
+  { name: "home", url: "/" },
+  { name: "pricing", url: "/pricing" },
+];
+
+interface Tier {
+  name: string;
+  price: string;
+  priceSuffix?: string;
+  tagline: string;
+  featured: boolean;
+  features: string[];
+  cta: { label: string; href: string; external?: boolean };
+}
+
+const tiers: Tier[] = [
+  {
+    name: "free",
+    price: "$0",
+    tagline: "edgepush.dev hosted trial",
+    featured: false,
+    features: [
+      "1 app",
+      "10,000 events / month",
+      "7-day log retention",
+      "community support",
+      "credential health probes",
+      "webhook deliveries",
+    ],
+    cta: {
+      label: "$ sign_in_with_github",
+      href: "/sign-in",
+      external: false,
+    },
+  },
+  {
+    name: "pro",
+    price: "$29",
+    priceSuffix: "/mo",
+    tagline: "for indie shippers running a few apps",
+    featured: true,
+    features: [
+      "3 apps",
+      "50,000 events / month",
+      "14-day log retention",
+      "priority email support from the operator",
+      "credential health probes (hosted)",
+      "webhook deliveries",
+    ],
+    cta: {
+      label: "$ upgrade_to_pro",
+      href: `${APP_URL}/dashboard/settings`,
+      external: true,
+    },
+  },
+  {
+    name: "self-host",
+    price: "$0",
+    tagline: "agpl-3.0, run on your own cloudflare account",
+    featured: false,
+    features: [
+      "unlimited apps",
+      "unlimited events",
+      "your retention, your rules",
+      "same source, no gated features",
+      "byo credentials",
+      "two wrangler deploys (api + web)",
+    ],
+    cta: {
+      label: "$ self_host_guide",
+      href: "/selfhost",
+      external: false,
+    },
+  },
+];
+
+interface ComparisonRowData {
+  feature: string;
+  free: string;
+  pro: string;
+  selfHost: string;
+  last?: boolean;
+}
+
+const comparisonRows: ComparisonRowData[] = [
+  { feature: "apps", free: "1", pro: "3", selfHost: "unlimited" },
+  { feature: "events / month", free: "10,000", pro: "50,000", selfHost: "unlimited" },
+  { feature: "log retention", free: "7 days", pro: "14 days", selfHost: "your rules" },
+  { feature: "credential health probes", free: "✓", pro: "✓", selfHost: "✓ (you run it)" },
+  { feature: "delivery webhooks", free: "✓", pro: "✓", selfHost: "✓" },
+  { feature: "priority email support", free: "-", pro: "24h best effort", selfHost: "-" },
+  { feature: "license", free: "agpl-3.0", pro: "agpl-3.0", selfHost: "agpl-3.0", last: true },
+];
+---
+
+<Base title="Pricing, edgepush" description="One honest price. Self-host if you'd rather. No seat fees, no usage traps." breadcrumbs={breadcrumbs}>
+  <div class="min-h-screen">
+    <!-- Top nav, minimal. Matches the rest of the marketing surfaces. -->
+    <nav class="border-b border-rule px-6 py-5">
+      <div class="mx-auto flex max-w-[1440px] items-center justify-between">
+        <a
+          href="/"
+          class="font-mono text-[14px] font-bold tracking-[-0.01em] text-text"
+        >
+          <span class="text-accent">●&nbsp;</span>
+          edgepush
+        </a>
+        <div class="flex items-center gap-6 font-mono text-[11px] uppercase tracking-[0.12em] text-muted">
+          <a href="/docs" class="hover:text-text">
+            docs
+          </a>
+          <a href="/pricing" class="text-accent">
+            ├ pricing
+          </a>
+          <a href="https://app.edgepush.dev/sign-in" class="hover:text-text">
+            sign_in
+          </a>
+        </div>
+      </div>
+    </nav>
+
+    <!-- Hero -->
+    <section class="px-6 pb-16 pt-24 md:pb-24 md:pt-32">
+      <div class="mx-auto max-w-[1440px]">
+        <h1 class="mb-6 font-mono text-[clamp(56px,9vw,132px)] font-extrabold leading-[0.9] tracking-[-0.045em] text-text">
+          $ edgepush --pricing
+        </h1>
+        <p class="max-w-[640px] font-sans text-[18px] leading-[1.55] text-muted-strong">
+          One honest price. Self-host if you&apos;d rather. No seat fees,
+          no usage traps.
+        </p>
+      </div>
+    </section>
+
+    <!-- Tier grid -->
+    <section class="px-6 pb-16">
+      <div class="mx-auto grid max-w-[1200px] grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
+        {tiers.map((tier) => (
+          <div class={`flex flex-col bg-surface p-6 border ${tier.featured ? "border-accent" : "border-rule-strong"}`}>
+            <div class="mb-6">
+              <div class="mb-4 font-mono text-[10px] uppercase tracking-[0.14em] text-accent">
+                ├&nbsp;{tier.name}
+              </div>
+              <div class="flex items-baseline gap-2">
+                <span class="font-mono text-[32px] font-bold leading-[1.05] tracking-[-0.02em] text-text">
+                  {tier.price}
+                </span>
+                {tier.priceSuffix && (
+                  <span class="font-sans text-[13px] text-muted">
+                    {tier.priceSuffix}
+                  </span>
+                )}
+              </div>
+              <p class="mt-2 font-sans text-[13px] leading-[1.5] text-muted-strong">
+                {tier.tagline}
+              </p>
+            </div>
+
+            <ul class="mb-6 flex-1 space-y-0 border-t border-rule">
+              {tier.features.map((f) => (
+                <li class="border-b border-rule py-3 font-mono text-[11px] uppercase tracking-[0.08em] text-muted-strong">
+                  <span class="text-accent">●&nbsp;</span>
+                  {f}
+                </li>
+              ))}
+            </ul>
+
+            <a
+              href={tier.cta.href}
+              target={tier.cta.external ? "_blank" : undefined}
+              rel={tier.cta.external ? "noopener noreferrer" : undefined}
+              class={
+                tier.featured
+                  ? "inline-flex items-center justify-center gap-2 rounded-none bg-accent px-4 py-3 font-mono text-[12px] font-semibold text-black hover:bg-accent-hover"
+                  : "inline-flex items-center justify-center gap-2 rounded-none bg-text px-4 py-3 font-mono text-[12px] font-semibold text-black hover:bg-accent"
+              }
+            >
+              {tier.cta.label}
+            </a>
+          </div>
+        ))}
+      </div>
+    </section>
+
+    <!-- Feature comparison table -->
+    <section class="px-6 pb-20">
+      <div class="mx-auto max-w-[1200px]">
+        <div class="mb-4 font-mono text-[11px] uppercase tracking-[0.12em] text-muted">
+          <span class="text-accent">─&nbsp;</span>feature_comparison
+        </div>
+        <div class="overflow-x-auto border border-rule-strong bg-surface">
+          <table class="w-full font-mono text-[12px] tnum">
+            <thead>
+              <tr class="border-b border-rule bg-[#050505] text-left text-[10px] uppercase tracking-[0.12em] text-muted">
+                <th class="px-4 py-3 font-medium">feature</th>
+                <th class="px-4 py-3 font-medium">free</th>
+                <th class="px-4 py-3 font-medium text-accent">pro</th>
+                <th class="px-4 py-3 font-medium">self-host</th>
+              </tr>
+            </thead>
+            <tbody>
+              {comparisonRows.map((row) => (
+                <tr class={row.last ? "" : "border-b border-rule"}>
+                  <td class="px-4 py-3 font-mono text-[11px] uppercase tracking-[0.08em] text-muted-strong">
+                    {row.feature}
+                  </td>
+                  <td class="px-4 py-3 text-muted-strong">{row.free}</td>
+                  <td class="px-4 py-3 text-text">{row.pro}</td>
+                  <td class="px-4 py-3 text-muted-strong">{row.selfHost}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+
+        <p class="mt-6 font-mono text-[11px] text-muted">
+          <span class="text-accent">●</span> over-quota: email
+          hello@edgepush.dev, we&apos;ll sort it out.
+        </p>
+        <p class="mt-2 font-mono text-[11px] text-muted">
+          <span class="text-accent">●</span> need a commercial license
+          (no agpl)? hello@edgepush.dev
+        </p>
+      </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="border-t border-rule px-6 py-8">
+      <div class="mx-auto max-w-[1440px] font-mono text-[10px] uppercase tracking-[0.12em] text-muted">
+        <span class="text-accent">●&nbsp;</span>
+        open source · agpl-3.0 server · mit sdk · self-host or let us run it
+      </div>
+    </footer>
+  </div>
+</Base>

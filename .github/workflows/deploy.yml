@@ -1,0 +1,82 @@
+name: Deploy
+
+# Deploys all workers on push to main.
+#
+# 1. web    → edgepush.dev (marketing)
+# 2. app    → app.edgepush.dev (dashboard, HOSTED_MODE=true)
+# 3. api    → api.edgepush.dev (Hono hot path)
+# 4. app    → demo.edgepush.dev (demo, --env demo)
+# 5. api    → demo-api.edgepush.dev (demo API, --env demo)
+#
+# Requires: CLOUDFLARE_API_TOKEN repo secret with Workers deploy permissions.
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: pnpm/action-setup@v6
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install
+        run: pnpm install --frozen-lockfile
+
+      - name: Build packages/server
+        run: pnpm --filter @edgepush/server build
+
+      # --- 1. web → edgepush.dev (Astro) ---
+      - name: Build & deploy web
+        working-directory: apps/web
+        run: |
+          pnpm exec astro build
+          pnpm exec wrangler deploy
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: a44903142ec31c36316cdfedea489cf6
+
+      # --- 2. app → app.edgepush.dev ---
+      - name: Build & deploy app
+        working-directory: apps/app
+        run: |
+          pnpm exec opennextjs-cloudflare build
+          pnpm exec wrangler deploy
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: a44903142ec31c36316cdfedea489cf6
+
+      # --- 3. api → api.edgepush.dev ---
+      - name: Deploy api
+        working-directory: apps/api
+        run: pnpm exec wrangler deploy
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: a44903142ec31c36316cdfedea489cf6
+
+      # --- 4. app demo → demo.edgepush.dev ---
+      - name: Build & deploy app (demo)
+        working-directory: apps/app
+        run: |
+          cp .env.demo .env.production
+          pnpm exec opennextjs-cloudflare build
+          pnpm exec wrangler deploy --env demo
+          git checkout .env.production
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: a44903142ec31c36316cdfedea489cf6
+
+      # --- 5. api demo → demo-api.edgepush.dev ---
+      - name: Deploy api (demo)
+        working-directory: apps/api
+        run: pnpm exec wrangler deploy --env demo
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: a44903142ec31c36316cdfedea489cf6

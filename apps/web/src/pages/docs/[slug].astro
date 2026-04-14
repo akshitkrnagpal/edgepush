@@ -1,0 +1,857 @@
+---
+import Docs from "../../layouts/Docs.astro";
+import Section from "../../components/docs/Section.astro";
+import Code from "../../components/docs/Code.astro";
+import { SECTIONS } from "../../data/sections";
+import type { GetStaticPaths } from "astro";
+
+export const getStaticPaths: GetStaticPaths = () => {
+  return SECTIONS.map((s) => ({ params: { slug: s.slug } }));
+};
+
+const { slug } = Astro.params;
+const idx = SECTIONS.findIndex((s) => s.slug === slug);
+const section = SECTIONS[idx];
+const prev = idx > 0 ? SECTIONS[idx - 1] : undefined;
+const next = idx < SECTIONS.length - 1 ? SECTIONS[idx + 1] : undefined;
+
+const pageTitle = section ? `${section.label} | edgepush docs` : "edgepush docs";
+const pageDescription = section?.description;
+
+const breadcrumbs = section
+  ? [
+      { name: "home", url: "/" },
+      { name: "docs", url: "/docs" },
+      { name: section.label, url: `/docs/${section.slug}` },
+    ]
+  : [
+      { name: "home", url: "/" },
+      { name: "docs", url: "/docs" },
+    ];
+---
+
+<Docs title={pageTitle} description={pageDescription} breadcrumbs={breadcrumbs}>
+  {!section ? (
+    <div class="font-mono text-[14px] text-muted">
+      <span class="text-accent">●</span> section not found:{" "}
+      <span class="text-text">{slug}</span>
+    </div>
+  ) : (
+    <>
+      <Section n={section.n} title={section.label}>
+        <!-- -- 01 install -- -->
+        {slug === "install" && (
+          <Code code={`pnpm add @edgepush/sdk
+# or npm install @edgepush/sdk
+# or bun add @edgepush/sdk`} />
+        )}
+
+        <!-- -- 02 create-app -- -->
+        {slug === "create-app" && (
+          <p>
+            Sign in at{" "}
+            <a
+              href="https://app.edgepush.dev/sign-in"
+              class="text-text underline decoration-accent underline-offset-4 hover:text-accent"
+            >
+              edgepush.dev
+            </a>
+            , create an app with your package name (for example{" "}
+            <span class="font-mono text-text">io.acme.myapp</span>), and
+            generate an API key. Copy the key immediately, it&apos;s shown
+            only once.
+          </p>
+        )}
+
+        <!-- -- 03 credentials -- -->
+        {slug === "credentials" && (
+          <>
+            <p class="mb-4">
+              Under your app&apos;s Credentials tab, upload your APNs .p8 key
+              (Apple Developer portal &rarr; Keys) and your Firebase service account
+              JSON (Firebase console &rarr; Project settings &rarr; Service accounts &rarr;
+              Generate new private key).
+            </p>
+            <p>
+              Both are encrypted with AES-GCM before being written to D1. The
+              raw key material is never exposed back to you or to anyone else
+              via the API.
+            </p>
+          </>
+        )}
+
+        <!-- -- 04 ios -- -->
+        {slug === "ios" && (
+          <>
+            <p class="mb-4">
+              In your Swift app, ask the user for permission, register with
+              APNs, then convert the returned <span class="font-mono text-text">Data</span>{" "}
+              into the lowercase hex string edgepush expects.
+            </p>
+            <Code code={`// AppDelegate.swift
+import UIKit
+import UserNotifications
+
+@UIApplicationMain
+class AppDelegate: UIResponder, UIApplicationDelegate {
+
+  func application(
+    _ application: UIApplication,
+    didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?
+  ) -> Bool {
+    UNUserNotificationCenter.current().requestAuthorization(
+      options: [.alert, .sound, .badge]
+    ) { granted, _ in
+      guard granted else { return }
+      DispatchQueue.main.async {
+        application.registerForRemoteNotifications()
+      }
+    }
+    return true
+  }
+
+  func application(
+    _ application: UIApplication,
+    didRegisterForRemoteNotificationsWithDeviceToken deviceToken: Data
+  ) {
+    // edgepush expects 64 lowercase hex characters
+    let token = deviceToken.map { String(format: "%02x", $0) }.joined()
+    Task { await registerToken(token) }
+  }
+
+  func application(
+    _ application: UIApplication,
+    didFailToRegisterForRemoteNotificationsWithError error: Error
+  ) {
+    print("APNs registration failed:", error)
+  }
+}`} />
+            <div class="mt-4 mb-2">
+              <p class="font-mono text-[12px] uppercase tracking-[0.12em] text-muted">
+                <span class="text-accent">&ndash;&nbsp;</span> notes
+              </p>
+              <ul class="mt-2 list-none space-y-2 font-sans text-[14px] leading-[1.6] text-muted-strong">
+                <li><span class="text-accent">●</span> The token is the same between development and production builds, but only api.push.apple.com (production) or api.sandbox.push.apple.com (sandbox) will accept it depending on which provisioning profile your app was built with. Mark the credential in the edgepush dashboard as production or sandbox accordingly.</li>
+                <li><span class="text-accent">●</span> The token can change when the user reinstalls the app, restores from backup, or migrates to a new device. Send fresh tokens to your server whenever didRegisterForRemoteNotifications fires.</li>
+                <li><span class="text-accent">●</span> Don't use Expo's ExponentPushToken format with edgepush. edgepush wants the native APNs token directly. See the React Native section for the migration.</li>
+              </ul>
+            </div>
+          </>
+        )}
+
+        <!-- -- 05 android -- -->
+        {slug === "android" && (
+          <>
+            <p class="mb-4">
+              You need a Firebase project with Cloud Messaging enabled and
+              your{" "}
+              <span class="font-mono text-text">google-services.json</span>{" "}
+              file in your app&apos;s{" "}
+              <span class="font-mono text-text">app/</span> directory. The
+              same Firebase project must own the service account JSON you
+              uploaded to edgepush.
+            </p>
+            <Code code={`// MyMessagingService.kt
+import com.google.firebase.messaging.FirebaseMessagingService
+import com.google.firebase.messaging.RemoteMessage
+
+class MyMessagingService : FirebaseMessagingService() {
+
+  override fun onNewToken(token: String) {
+    sendTokenToServer(token)
+  }
+
+  override fun onMessageReceived(message: RemoteMessage) {
+    // Optional: handle pushes received while the app is foregrounded.
+  }
+}`} />
+            <p class="mt-4 mb-2">
+              Register the service in{" "}
+              <span class="font-mono text-text">AndroidManifest.xml</span>:
+            </p>
+            <Code code={`<service
+  android:name=".MyMessagingService"
+  android:exported="false">
+  <intent-filter>
+    <action android:name="com.google.firebase.MESSAGING_EVENT" />
+  </intent-filter>
+</service>`} />
+            <p class="mt-4 mb-2">Fetch the initial token after sign-in:</p>
+            <Code code={`import com.google.firebase.messaging.FirebaseMessaging
+import kotlinx.coroutines.tasks.await
+
+suspend fun fetchInitialFcmToken(): String? {
+  return try {
+    FirebaseMessaging.getInstance().token.await()
+  } catch (e: Exception) {
+    null  // Google Play Services unavailable, etc.
+  }
+}`} />
+            <div class="mt-4 mb-2">
+              <p class="font-mono text-[12px] uppercase tracking-[0.12em] text-muted">
+                <span class="text-accent">&ndash;&nbsp;</span> notes
+              </p>
+              <ul class="mt-2 list-none space-y-2 font-sans text-[14px] leading-[1.6] text-muted-strong">
+                <li><span class="text-accent">●</span> The token is a long opaque string (over 150 characters), much longer than an APNs hex token. edgepush auto-detects format on /v1/send if you don't pass a platform field, but you can set it explicitly.</li>
+                <li><span class="text-accent">●</span> The Firebase project ID in your client's google-services.json must match the project_id inside the FCM service account JSON you uploaded to edgepush. Different projects = silent delivery failures.</li>
+                <li><span class="text-accent">●</span> If your app supports multiple flavors (e.g. dev / staging / prod) point each flavor at its own Firebase project AND its own edgepush app. Don't cross-wire credentials.</li>
+              </ul>
+            </div>
+          </>
+        )}
+
+        <!-- -- 06 react-native -- -->
+        {slug === "react-native" && (
+          <>
+            <p class="mb-4">
+              React Native gives you three paths. Pick the one matching your
+              project shape, and if you&apos;re an Expo user, read the callout
+              below carefully because there&apos;s exactly one trap you need to
+              avoid.
+            </p>
+            <h3 class="mt-6 mb-2 font-mono text-[14px] font-bold text-text">
+              Bare RN with @react-native-firebase/messaging
+            </h3>
+            <Code code={`import messaging from "@react-native-firebase/messaging";
+
+export async function setupPush() {
+  const status = await messaging().requestPermission();
+  if (
+    status === messaging.AuthorizationStatus.DENIED ||
+    status === messaging.AuthorizationStatus.NOT_DETERMINED
+  ) return;
+
+  const fcmToken = await messaging().getToken();
+  await sendTokenToServer({ platform: "fcm", token: fcmToken });
+
+  messaging().onTokenRefresh((newToken) => {
+    sendTokenToServer({ platform: "fcm", token: newToken });
+  });
+}`} />
+            <h3 class="mt-8 mb-2 font-mono text-[14px] font-bold text-text">
+              Expo (managed or bare) with expo-notifications
+            </h3>
+            <Code code={`import * as Notifications from "expo-notifications";
+
+export async function setupPush() {
+  const { status } = await Notifications.requestPermissionsAsync();
+  if (status !== "granted") return;
+
+  // DEVICE token = native APNs hex / FCM token (use this with edgepush)
+  // EXPO token = "ExponentPushToken[...]" (only Expo's Push Service)
+  const token = await Notifications.getDevicePushTokenAsync();
+
+  await fetch("https://your.api/register-token", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({
+      platform: token.type,
+      token: token.data,
+    }),
+  });
+}`} />
+            <div class="mt-6 border border-accent bg-surface px-5 py-4 font-sans text-[14px] leading-[1.6] text-muted-strong">
+              <p class="mb-2 font-mono text-[11px] uppercase tracking-[0.12em] text-accent">
+                ●&nbsp; the one expo trap
+              </p>
+              <p class="mb-2">
+                Most Expo Notifications tutorials lead with{" "}
+                <span class="font-mono text-text">getExpoPushTokenAsync()</span>.
+                That returns an{" "}
+                <span class="font-mono text-text">ExponentPushToken[xxx]</span>{" "}
+                wrapper that <em>only</em> Expo&apos;s Push Service understands.
+                It is not a native APNs or FCM token.
+              </p>
+              <p>
+                edgepush wants the real one. Always use{" "}
+                <span class="font-mono text-text">getDevicePushTokenAsync()</span>{" "}
+                instead. That&apos;s the entire client-side migration step from
+                Expo Push to edgepush, change one function name.
+              </p>
+            </div>
+          </>
+        )}
+
+        <!-- -- 07 send -- -->
+        {slug === "send" && (
+          <>
+            <Code code={`import { Edgepush } from "@edgepush/sdk";
+
+const client = new Edgepush({
+  apiKey: "com.acme.myapp|sk_abc123...",
+});
+
+const ticket = await client.send({
+  to: deviceToken,  // native APNs or FCM token
+  title: "Hello",
+  body: "From edgepush",
+  data: { url: "myapp://home" },
+});
+
+console.log(ticket.id); // save this to poll the receipt later`} />
+            <p class="mt-4">
+              Every field maps directly to the underlying APNs or FCM payload.
+              There&apos;s no proprietary token format and no abstracted-away
+              headers, see <a href="/docs/rich" class="text-text underline decoration-accent underline-offset-4 hover:text-accent">rich notifications</a>{" "}
+              for the full surface.
+            </p>
+          </>
+        )}
+
+        <!-- -- 08 rich -- -->
+        {slug === "rich" && (
+          <>
+            <p class="mb-4">
+              edgepush forwards the full APNs and FCM header surface so you
+              can ship features Expo Push Service can&apos;t. The fields below
+              are all optional and additive, the basic{" "}
+              <span class="font-mono text-text">{"{ to, title, body }"}</span>{" "}
+              still works.
+            </p>
+            <Code code={`await client.send({
+  to: deviceToken,
+  title: "New order #4271",
+  body: "2x flat white, table 3",
+
+  // rich notification image
+  image: "https://cdn.acme.app/o/4271.jpg",
+  mutableContent: true,  // required for the iOS NSE pattern
+
+  // collapse-id: identical keys replace each other on the device
+  collapseId: "order-4271",
+
+  // absolute expiration timestamp
+  expirationAt: Math.floor(Date.now() / 1000) + 600,
+
+  // explicit apns push type (default: "alert")
+  pushType: "alert",
+});`} />
+            <p class="mt-4">
+              For iOS rich notifications you also need a Notification Service
+              Extension target in your app. Apple&apos;s{" "}
+              <a
+                href="https://developer.apple.com/documentation/usernotifications/modifying-content-in-newly-delivered-notifications"
+                target="_blank"
+                rel="noopener noreferrer"
+                class="text-text underline decoration-accent underline-offset-4 hover:text-accent"
+              >
+                Modifying content in newly delivered notifications
+              </a>{" "}
+              walks through the NSE setup.
+            </p>
+          </>
+        )}
+
+        <!-- -- 09 topics -- -->
+        {slug === "topics" && (
+          <>
+            <p class="mb-4">
+              FCM supports server-side topic broadcasting. Instead of sending to a
+              specific device token, you can send to all devices subscribed to a
+              topic. edgepush passes the topic or condition straight through to
+              the FCM HTTP v1 API.
+            </p>
+            <h3 class="mt-6 mb-3 font-mono text-[14px] font-bold text-text">
+              Topic send
+            </h3>
+            <p class="mb-3">
+              Devices subscribe to topics client-side via the Firebase SDK.
+              Your server sends to the topic name (no &quot;/topics/&quot; prefix):
+            </p>
+            <Code code={`// all devices subscribed to "breaking-news" get this
+await client.send({
+  topic: "breaking-news",
+  title: "Earthquake in Tokyo",
+  body: "Magnitude 6.2, no tsunami warning",
+});`} />
+            <h3 class="mt-6 mb-3 font-mono text-[14px] font-bold text-text">
+              Condition send
+            </h3>
+            <p class="mb-3">
+              Target devices subscribed to a boolean combination of topics:
+            </p>
+            <Code code={`// devices subscribed to "sports" AND ("news" OR "breaking")
+await client.send({
+  condition: "'sports' in topics && ('news' in topics || 'breaking' in topics)",
+  title: "Match started",
+  body: "Team A vs Team B, kickoff now",
+});`} />
+            <div class="mt-4 mb-2">
+              <p class="font-mono text-[12px] uppercase tracking-[0.12em] text-muted">
+                <span class="text-accent">&ndash;&nbsp;</span> notes
+              </p>
+              <ul class="mt-2 list-none space-y-2 font-sans text-[14px] leading-[1.6] text-muted-strong">
+                <li><span class="text-accent">●</span> Topic and condition sends are FCM-only. APNs does not have server-side topic broadcasting.</li>
+                <li><span class="text-accent">●</span> Exactly one of to, topic, or condition must be set per message. The API rejects requests with more than one.</li>
+                <li><span class="text-accent">●</span> A topic send consumes 1 event from your monthly quota regardless of how many devices are subscribed. FCM fans out on their side.</li>
+                <li><span class="text-accent">●</span> Devices subscribe to topics via FirebaseMessaging.getInstance().subscribeToTopic("news") on Android or Messaging.messaging().subscribe(toTopic:) on iOS (through the Firebase SDK, not edgepush).</li>
+                <li><span class="text-accent">●</span> The CLI supports --topic and --condition flags: edgepush send --topic news --title "Hello"</li>
+              </ul>
+            </div>
+          </>
+        )}
+
+        <!-- -- 10 receipts -- -->
+        {slug === "receipts" && (
+          <>
+            <p class="mb-4">
+              After you send, poll the receipt to see whether APNs or FCM
+              accepted the message:
+            </p>
+            <Code code={`const receipt = await client.getReceipt(ticket.id);
+
+if (receipt.status === "delivered") {
+  console.log("● delivered");
+} else if (receipt.status === "failed") {
+  console.log("● failed:", receipt.error);
+  if (receipt.tokenInvalid) {
+    // Remove the token from your database
+  }
+}`} />
+          </>
+        )}
+
+        <!-- -- 11 webhooks -- -->
+        {slug === "webhooks" && (
+          <>
+            <p class="mb-4">
+              Configure a webhook URL on your app and edgepush will POST every
+              state change to your endpoint with an HMAC-SHA256 signature over
+              the raw body. No polling required.
+            </p>
+            <Code code={`POST /your/webhook  HTTP/1.1
+x-edgepush-event:     message.delivered
+x-edgepush-signature: sha256=9f86d081...
+x-edgepush-id:        evt_01HX2A9P4M
+content-type:         application/json
+
+{
+  "event": "message.delivered",
+  "messageId": "tk_01HX2A9P4M",
+  "appId": "app_...",
+  "status": "delivered",
+  "error": null,
+  "tokenInvalid": false,
+  "timestamp": 1744386512000
+}`} />
+            <p class="mt-4 mb-3">Verify the signature in your handler:</p>
+            <Code code={`import { createHmac, timingSafeEqual } from "node:crypto";
+
+function verify(body: string, sigHeader: string, secret: string) {
+  const expected = createHmac("sha256", secret)
+    .update(body)
+    .digest("base64");
+  const provided = sigHeader.replace(/^sha256=/, "");
+  return timingSafeEqual(
+    Buffer.from(expected),
+    Buffer.from(provided),
+  );
+}`} />
+          </>
+        )}
+
+        <!-- -- 12 errors -- -->
+        {slug === "errors" && (
+          <>
+            <p class="mb-4">
+              When a push fails, the receipt&apos;s{" "}
+              <span class="font-mono text-text">error</span> field contains
+              the reason code from APNs or FCM. The{" "}
+              <span class="font-mono text-text">tokenInvalid</span> boolean
+              flags tokens you should remove from your database.
+            </p>
+            <h3 class="mt-6 mb-3 font-mono text-[14px] font-bold text-text">
+              APNs error codes
+            </h3>
+            <div class="overflow-x-auto border border-rule-strong bg-surface">
+              <table class="w-full font-mono text-[12px]">
+                <thead>
+                  <tr class="border-b border-rule-strong bg-surface-2 text-left text-[10px] uppercase tracking-[0.12em] text-muted">
+                    <th class="px-4 py-2 font-medium">reason</th>
+                    <th class="px-4 py-2 font-medium">tokenInvalid</th>
+                    <th class="px-4 py-2 font-medium">action</th>
+                  </tr>
+                </thead>
+                <tbody class="text-muted-strong">
+                  <tr class="border-b border-rule last:border-b-0">
+                    <td class="px-4 py-2 text-text">BadDeviceToken</td>
+                    <td class="px-4 py-2 text-error">true</td>
+                    <td class="px-4 py-2">Remove the token. The device unregistered or the token is malformed.</td>
+                  </tr>
+                  <tr class="border-b border-rule last:border-b-0">
+                    <td class="px-4 py-2 text-text">Unregistered</td>
+                    <td class="px-4 py-2 text-error">true</td>
+                    <td class="px-4 py-2">Remove the token. The device was wiped or the app was uninstalled.</td>
+                  </tr>
+                  <tr class="border-b border-rule last:border-b-0">
+                    <td class="px-4 py-2 text-text">DeviceTokenNotForTopic</td>
+                    <td class="px-4 py-2 text-error">true</td>
+                    <td class="px-4 py-2">Remove the token. It belongs to a different app (bundle ID mismatch).</td>
+                  </tr>
+                  <tr class="border-b border-rule last:border-b-0">
+                    <td class="px-4 py-2 text-text">PayloadTooLarge</td>
+                    <td class="px-4 py-2 text-muted">false</td>
+                    <td class="px-4 py-2">Reduce your payload size (4096 byte APNs limit).</td>
+                  </tr>
+                  <tr class="border-b border-rule last:border-b-0">
+                    <td class="px-4 py-2 text-text">TooManyRequests</td>
+                    <td class="px-4 py-2 text-muted">false</td>
+                    <td class="px-4 py-2">Back off. Apple is rate-limiting your sends to this device.</td>
+                  </tr>
+                  <tr class="border-b border-rule last:border-b-0">
+                    <td class="px-4 py-2 text-text">InternalServerError</td>
+                    <td class="px-4 py-2 text-muted">false</td>
+                    <td class="px-4 py-2">Retry. Transient APNs failure.</td>
+                  </tr>
+                  <tr class="border-b border-rule last:border-b-0">
+                    <td class="px-4 py-2 text-text">ServiceUnavailable</td>
+                    <td class="px-4 py-2 text-muted">false</td>
+                    <td class="px-4 py-2">Retry. APNs is temporarily down.</td>
+                  </tr>
+                  <tr class="border-b border-rule last:border-b-0">
+                    <td class="px-4 py-2 text-text">ExpiredProviderToken</td>
+                    <td class="px-4 py-2 text-muted">false</td>
+                    <td class="px-4 py-2">Your .p8 key may be revoked. Check the credential health panel.</td>
+                  </tr>
+                  <tr class="border-b border-rule last:border-b-0">
+                    <td class="px-4 py-2 text-text">InvalidProviderToken</td>
+                    <td class="px-4 py-2 text-muted">false</td>
+                    <td class="px-4 py-2">Team ID, key ID, or .p8 key is wrong. Re-upload the credential.</td>
+                  </tr>
+                  <tr class="border-b border-rule last:border-b-0">
+                    <td class="px-4 py-2 text-text">TopicDisallowed</td>
+                    <td class="px-4 py-2 text-muted">false</td>
+                    <td class="px-4 py-2">The bundle ID is not authorized for push. Check your Apple Developer portal.</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <h3 class="mt-6 mb-3 font-mono text-[14px] font-bold text-text">
+              FCM error codes
+            </h3>
+            <div class="overflow-x-auto border border-rule-strong bg-surface">
+              <table class="w-full font-mono text-[12px]">
+                <thead>
+                  <tr class="border-b border-rule-strong bg-surface-2 text-left text-[10px] uppercase tracking-[0.12em] text-muted">
+                    <th class="px-4 py-2 font-medium">reason</th>
+                    <th class="px-4 py-2 font-medium">tokenInvalid</th>
+                    <th class="px-4 py-2 font-medium">action</th>
+                  </tr>
+                </thead>
+                <tbody class="text-muted-strong">
+                  <tr class="border-b border-rule last:border-b-0">
+                    <td class="px-4 py-2 text-text">NOT_FOUND</td>
+                    <td class="px-4 py-2 text-error">true</td>
+                    <td class="px-4 py-2">Remove the token. The registration no longer exists.</td>
+                  </tr>
+                  <tr class="border-b border-rule last:border-b-0">
+                    <td class="px-4 py-2 text-text">UNREGISTERED</td>
+                    <td class="px-4 py-2 text-error">true</td>
+                    <td class="px-4 py-2">Remove the token. The app was uninstalled.</td>
+                  </tr>
+                  <tr class="border-b border-rule last:border-b-0">
+                    <td class="px-4 py-2 text-text">INVALID_ARGUMENT</td>
+                    <td class="px-4 py-2 text-error">true</td>
+                    <td class="px-4 py-2">The token is malformed. Remove it.</td>
+                  </tr>
+                  <tr class="border-b border-rule last:border-b-0">
+                    <td class="px-4 py-2 text-text">PERMISSION_DENIED</td>
+                    <td class="px-4 py-2 text-muted">false</td>
+                    <td class="px-4 py-2">The service account lost cloud messaging permissions. Re-check IAM.</td>
+                  </tr>
+                  <tr class="border-b border-rule last:border-b-0">
+                    <td class="px-4 py-2 text-text">UNAVAILABLE</td>
+                    <td class="px-4 py-2 text-muted">false</td>
+                    <td class="px-4 py-2">Retry. FCM is temporarily overloaded.</td>
+                  </tr>
+                  <tr class="border-b border-rule last:border-b-0">
+                    <td class="px-4 py-2 text-text">INTERNAL</td>
+                    <td class="px-4 py-2 text-muted">false</td>
+                    <td class="px-4 py-2">Retry. Transient FCM failure.</td>
+                  </tr>
+                  <tr class="border-b border-rule last:border-b-0">
+                    <td class="px-4 py-2 text-text">QUOTA_EXCEEDED</td>
+                    <td class="px-4 py-2 text-muted">false</td>
+                    <td class="px-4 py-2">Back off. You hit FCM per-project rate limit.</td>
+                  </tr>
+                  <tr class="border-b border-rule last:border-b-0">
+                    <td class="px-4 py-2 text-text">SENDER_ID_MISMATCH</td>
+                    <td class="px-4 py-2 text-muted">false</td>
+                    <td class="px-4 py-2">The token was registered under a different Firebase project.</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </>
+        )}
+
+        <!-- -- 13 rate-limits -- -->
+        {slug === "rate-limits" && (
+          <>
+            <p class="mb-4">
+              Two limits gate{" "}
+              <span class="font-mono text-text">POST /v1/send</span>: a
+              per-app burst rate limit and (on the hosted tier) a monthly event
+              quota. Rate-limited requests do NOT consume quota.
+            </p>
+            <h3 class="mt-6 mb-3 font-mono text-[14px] font-bold text-text">
+              Per-app rate limit
+            </h3>
+            <p class="mb-4">
+              Token-bucket via a Durable Object, scoped to each app. Default:
+              1000 events/minute burst capacity. When exceeded:
+            </p>
+            <Code code={`HTTP 429
+{
+  "error": "rate_limited",
+  "retry_after_ms": 1200
+}`} />
+            <p class="mt-4">
+              Wait <span class="font-mono text-text">retry_after_ms</span>{" "}
+              and resend. The limit is configurable per app via{" "}
+              <span class="font-mono text-text">
+                PUT /api/dashboard/apps/:id/rate-limit
+              </span>{" "}
+              (10 to 100,000 events/min, or null to reset to default). Self-hosters
+              can also change the server-wide default in{" "}
+              <span class="font-mono text-text">packages/server/src/rate-limiter.ts</span>.
+            </p>
+            <h3 class="mt-6 mb-3 font-mono text-[14px] font-bold text-text">
+              Monthly event quota (hosted tier only)
+            </h3>
+            <p class="mb-4">
+              Free: 10,000 events/month. Pro: 50,000 events/month. Self-host: unlimited.
+            </p>
+            <Code code={`HTTP 429
+{
+  "error": "quota_exceeded",
+  "plan": "free",
+  "limit": 10000,
+  "used": 10000,
+  "year_month": "2026-04",
+  "detail": "monthly send limit..."
+}
+
+Headers:
+  x-ratelimit-limit: 10000
+  x-ratelimit-used:  10000
+  x-ratelimit-scope: monthly`} />
+            <p class="mt-4">
+              The counter resets on the first day of each calendar month.
+              Upgrade to Pro on{" "}
+              <a href="/pricing" class="text-text underline decoration-accent underline-offset-4 hover:text-accent">
+                /pricing
+              </a>{" "}
+              to raise the cap.
+            </p>
+          </>
+        )}
+
+        <!-- -- 14 auth -- -->
+        {slug === "auth" && (
+          <>
+            <p class="mb-4">
+              Every <span class="font-mono text-text">/v1/send</span> and{" "}
+              <span class="font-mono text-text">/v1/receipts</span> request
+              requires a Bearer token:
+            </p>
+            <Code code={`Authorization: Bearer com.acme.myapp|sk_abc123def456...`} />
+            <h3 class="mt-6 mb-3 font-mono text-[14px] font-bold text-text">
+              Key format
+            </h3>
+            <p class="mb-4">
+              <span class="font-mono text-text">&lt;package_name&gt;|&lt;secret&gt;</span>.
+              The package name prefix is the app&apos;s bundle/package ID. The
+              secret is a random string generated by the server. Keys
+              self-identify in logs so you can tell which app a request belongs
+              to.
+            </p>
+            <h3 class="mt-6 mb-3 font-mono text-[14px] font-bold text-text">
+              Creating and revoking
+            </h3>
+            <p class="mb-4">
+              Create keys in the dashboard under your app&apos;s API Keys
+              section. The full key is shown exactly once at creation time.
+              Copy it immediately. You can create multiple keys per app.
+            </p>
+            <p class="mb-4">
+              To revoke a key, click the revoke button in the dashboard. The
+              key stops working immediately. If you need zero-downtime
+              rotation, create a new key first, update your server, then revoke
+              the old one.
+            </p>
+            <h3 class="mt-6 mb-3 font-mono text-[14px] font-bold text-text">
+              Environment variables
+            </h3>
+            <Code code={`# .env (never commit this file)
+EDGEPUSH_API_KEY=com.acme.myapp|sk_abc123def456...
+
+# your server
+const client = new Edgepush({
+  apiKey: process.env.EDGEPUSH_API_KEY,
+});`} />
+            <p class="mt-4">
+              The CLI reads from{" "}
+              <span class="font-mono text-text">EDGEPUSH_API_KEY</span> and{" "}
+              <span class="font-mono text-text">EDGEPUSH_BASE_URL</span>{" "}
+              environment variables as overrides. See{" "}
+              <a href="/docs/cli" class="text-text underline decoration-accent underline-offset-4 hover:text-accent">
+                the CLI section
+              </a>{" "}
+              for details.
+            </p>
+          </>
+        )}
+
+        <!-- -- 15 batch -- -->
+        {slug === "batch" && (
+          <>
+            <p class="mb-4">
+              Send up to 100 messages in a single call. Dispatched through a
+              Cloudflare Queue with automatic retries.
+            </p>
+            <Code code={`const tickets = await client.sendBatch([
+  { to: token1, title: "Hi Alice" },
+  { to: token2, title: "Hi Bob" },
+]);
+
+const receipts = await client.getReceipts(tickets.map((t) => t.id));`} />
+          </>
+        )}
+
+        <!-- -- 16 cli -- -->
+        {slug === "cli" && (
+          <>
+            <p class="mb-4">
+              <span class="font-mono text-text">@edgepush/cli</span> is a
+              terminal client for sending pushes from your laptop or a CI
+              script. Install globally and authenticate once.
+            </p>
+            <Code code={`npm install -g @edgepush/cli
+edgepush login              # paste an api key
+edgepush whoami             # confirm the active key
+edgepush send <token> --title "Hello" --body "From the CLI"
+edgepush receipt <ticket_id>`} />
+            <p class="mt-4">
+              The CLI exposes the full field surface as flags:{" "}
+              <span class="font-mono text-text">--image</span>,{" "}
+              <span class="font-mono text-text">--collapse-id</span>,{" "}
+              <span class="font-mono text-text">--push-type</span>,{" "}
+              <span class="font-mono text-text">--mutable-content</span>,{" "}
+              <span class="font-mono text-text">--expiration-at</span>,{" "}
+              <span class="font-mono text-text">--ttl</span>,{" "}
+              <span class="font-mono text-text">--priority</span>. Run{" "}
+              <span class="font-mono text-text">edgepush --help</span>{" "}
+              for the full list. The SDK is bundled inline so the CLI is a
+              single-package install.
+            </p>
+          </>
+        )}
+
+        <!-- -- 17 api -- -->
+        {slug === "api" && (
+          <>
+            <p class="mb-4">
+              The SDK wraps a simple REST API. You can call it directly from any
+              language. All endpoints require{" "}
+              <span class="font-mono text-text">
+                Authorization: Bearer &lt;api_key&gt;
+              </span>
+              .
+            </p>
+            <Code code={`# Send
+curl -X POST https://api.edgepush.dev/v1/send \\
+  -H "Authorization: Bearer io.acme.myapp|abc..." \\
+  -H "Content-Type: application/json" \\
+  -d '{
+    "messages": [{
+      "to": "DEVICE_TOKEN",
+      "title": "Hello",
+      "body": "World"
+    }]
+  }'
+
+# Get a receipt
+curl https://api.edgepush.dev/v1/receipts/TICKET_ID \\
+  -H "Authorization: Bearer io.acme.myapp|abc..."`} />
+          </>
+        )}
+
+        <!-- -- 18 self-host -- -->
+        {slug === "self-host" && (
+          <>
+            <p class="mb-4">
+              edgepush server + dashboard are{" "}
+              <span class="font-mono text-text">AGPL-3.0</span>. The SDK,
+              CLI, and shared types are{" "}
+              <span class="font-mono text-text">MIT</span> so you can embed
+              them in a closed-source app without copyleft obligations. Run the
+              whole stack on your own Cloudflare account:
+            </p>
+            <Code code={`git clone https://github.com/akshitkrnagpal/edgepush.git
+cd edgepush
+pnpm install
+
+# Create D1 database, KV namespace, Queues
+cd apps/api
+pnpm wrangler d1 create edgepush
+pnpm wrangler kv namespace create edgepush-cache
+pnpm wrangler queues create edgepush-dispatch
+pnpm wrangler queues create edgepush-dispatch-dlq
+pnpm wrangler queues create edgepush-webhook
+pnpm wrangler queues create edgepush-webhook-dlq
+
+# Paste the IDs into wrangler.jsonc, then:
+pnpm wrangler secret put ENCRYPTION_KEY
+pnpm wrangler secret put BETTER_AUTH_SECRET
+pnpm wrangler secret put GITHUB_CLIENT_ID
+pnpm wrangler secret put GITHUB_CLIENT_SECRET
+
+pnpm db:migrate:remote
+pnpm deploy
+
+# Deploy the dashboard (app worker)
+cd ../app && pnpm deploy`} />
+            <p class="mt-4">
+              Full guide:{" "}
+              <a
+                href="https://github.com/akshitkrnagpal/edgepush/blob/main/SELFHOST.md"
+                target="_blank"
+                rel="noopener noreferrer"
+                class="text-text underline decoration-accent underline-offset-4 hover:text-accent"
+              >
+                SELFHOST.md
+              </a>{" "}
+              covers prerequisites, secrets, migrations, troubleshooting, and the
+              nightly D1 backup workflow.
+            </p>
+          </>
+        )}
+      </Section>
+
+      <!-- Prev / Next navigation -->
+      <div class="mt-16 flex items-center justify-between border-t border-rule pt-6 font-mono text-[12px]">
+        {prev ? (
+          <a
+            href={`/docs/${prev.slug}`}
+            class="text-muted-strong hover:text-text"
+          >
+            <span class="text-accent">&larr;</span> {prev.label}
+          </a>
+        ) : (
+          <span />
+        )}
+        {next ? (
+          <a
+            href={`/docs/${next.slug}`}
+            class="text-muted-strong hover:text-text"
+          >
+            {next.label} <span class="text-accent">&rarr;</span>
+          </a>
+        ) : (
+          <span />
+        )}
+      </div>
+    </>
+  )}
+</Docs>

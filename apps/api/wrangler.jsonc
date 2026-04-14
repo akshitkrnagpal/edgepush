@@ -1,0 +1,124 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "edgepush-api",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-04-10",
+  "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
+  "workers_dev": true,
+
+  "observability": {
+    "enabled": true,
+    "traces": {
+      "enabled": true
+    }
+  },
+
+  "build": {
+    "caching": true
+  },
+
+  // --- Production (default) ---
+
+  "routes": [
+    { "pattern": "api.edgepush.dev", "custom_domain": true }
+  ],
+
+  "vars": {
+    "BETTER_AUTH_URL": "https://api.edgepush.dev",
+    "DASHBOARD_URL": "https://app.edgepush.dev",
+    "HOSTED_MODE": "true"
+  },
+
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "edgepush",
+      "database_id": "33dc63eb-f54e-49bb-a91e-0f24ddcda721",
+      "migrations_dir": "../../packages/server/migrations"
+    }
+  ],
+
+  "kv_namespaces": [
+    {
+      "binding": "CACHE",
+      "id": "a97336dff01c482ea90acdf4aac4233e"
+    }
+  ],
+
+  "queues": {
+    "producers": [
+      { "queue": "edgepush-dispatch", "binding": "DISPATCH_QUEUE" },
+      { "queue": "edgepush-webhook", "binding": "WEBHOOK_QUEUE" }
+    ],
+    "consumers": [
+      { "queue": "edgepush-dispatch", "max_batch_size": 100, "max_batch_timeout": 5, "max_retries": 3, "dead_letter_queue": "edgepush-dispatch-dlq" },
+      { "queue": "edgepush-dispatch-dlq", "max_batch_size": 50, "max_batch_timeout": 30, "max_retries": 1 },
+      { "queue": "edgepush-webhook", "max_batch_size": 50, "max_batch_timeout": 5, "max_retries": 3, "dead_letter_queue": "edgepush-webhook-dlq" },
+      { "queue": "edgepush-webhook-dlq", "max_batch_size": 50, "max_batch_timeout": 30, "max_retries": 1 }
+    ]
+  },
+
+  "durable_objects": {
+    "bindings": [
+      { "name": "RATE_LIMITER", "class_name": "RateLimiter" }
+    ]
+  },
+
+  "migrations": [
+    { "tag": "v1", "new_sqlite_classes": ["RateLimiter"] }
+  ],
+
+  "triggers": {
+    "crons": ["0 * * * *", "0 3 * * *"]
+  },
+
+  // --- Demo environment ---
+  //
+  // Deploy:  wrangler deploy --env demo
+  // Migrate: wrangler d1 migrations apply edgepush-demo --env demo --remote
+  // Secrets: wrangler secret put ENCRYPTION_KEY --env demo
+  //
+  // DEMO_MODE=true caps rate limit at 50/min and max 2 apps per user.
+  // HOSTED_MODE=false (no billing, no quotas).
+  // All data wiped daily at 04:00 UTC via .github/workflows/demo-nuke.yml.
+
+  "env": {
+    "demo": {
+      "routes": [
+        { "pattern": "demo-api.edgepush.dev", "custom_domain": true }
+      ],
+      "vars": {
+        "BETTER_AUTH_URL": "https://demo-api.edgepush.dev",
+        "DASHBOARD_URL": "https://demo.edgepush.dev",
+        "HOSTED_MODE": "false",
+        "DEMO_MODE": "true"
+      },
+      "d1_databases": [
+        {
+          "binding": "DB",
+          "database_name": "edgepush-demo",
+          "database_id": "f44b1fdc-6823-4229-8c87-37f722ac0fc9",
+          "migrations_dir": "../../packages/server/migrations"
+        }
+      ],
+      "kv_namespaces": [
+        {
+          "binding": "CACHE",
+          "id": "9b32f9ac5fcb4ab6841f662cb2348265"
+        }
+      ],
+      "queues": {
+        "producers": [
+          { "queue": "edgepush-demo-dispatch", "binding": "DISPATCH_QUEUE" },
+          { "queue": "edgepush-demo-webhook", "binding": "WEBHOOK_QUEUE" }
+        ],
+        "consumers": [
+          { "queue": "edgepush-demo-dispatch", "max_batch_size": 50, "max_batch_timeout": 5, "max_retries": 3, "dead_letter_queue": "edgepush-demo-dispatch-dlq" },
+          { "queue": "edgepush-demo-dispatch-dlq", "max_batch_size": 50, "max_batch_timeout": 30, "max_retries": 1 },
+          { "queue": "edgepush-demo-webhook", "max_batch_size": 50, "max_batch_timeout": 5, "max_retries": 3, "dead_letter_queue": "edgepush-demo-webhook-dlq" },
+          { "queue": "edgepush-demo-webhook-dlq", "max_batch_size": 50, "max_batch_timeout": 30, "max_retries": 1 }
+        ]
+      }
+    }
+  }
+}

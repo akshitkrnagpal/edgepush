@@ -1,0 +1,82 @@
+@import "tailwindcss";
+
+@theme inline {
+  --color-bg: #000000;
+  --color-surface: #0a0a0a;
+  --color-surface-2: #111111;
+  --color-rule: #1a1a1a;
+  --color-rule-strong: #262626;
+  --color-text: #f5f3ee;
+  --color-muted-strong: #9a9a9a;
+  --color-muted: #6b6b6b;
+  --color-accent: #ff6b1a;
+  --color-accent-hover: #ff8a42;
+  --color-accent-dim: #b54a10;
+  --color-success: #6bcb77;
+  --color-warning: #f0db4f;
+  --color-error: #ff4f4f;
+
+  --font-sans: "Satoshi", -apple-system, system-ui, sans-serif;
+  --font-mono:
+    var(--font-jetbrains-mono), ui-monospace, "SF Mono", Menlo, monospace;
+
+  --radius-sm: 0px;
+  --radius-md: 2px;
+  --radius-lg: 4px;
+}
+
+html {
+  background: var(--color-bg);
+  color: var(--color-text);
+}
+
+body {
+  background: var(--color-bg);
+  color: var(--color-text);
+  font-family: var(--font-sans);
+  font-feature-settings: "ss01", "ss02";
+  -webkit-font-smoothing: antialiased;
+  line-height: 1.55;
+}
+
+/* Film grain overlay — warmth on pure black. */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 100;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='200' height='200'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/><feColorMatrix values='0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 0.06 0'/></filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>");
+  opacity: 0.5;
+  mix-blend-mode: overlay;
+}
+
+/* Tabular numerals for data contexts. */
+.tnum {
+  font-feature-settings: "tnum";
+}
+
+/* Pulse used on the "live" hero chip. */
+@keyframes ep-pulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(255, 107, 26, 0.5);
+  }
+  100% {
+    box-shadow: 0 0 0 8px rgba(255, 107, 26, 0);
+  }
+}
+
+.ep-pulse {
+  animation: ep-pulse 1.8s ease-out infinite;
+}
+
+/* Log-stream ticker — subtle upward scroll. */
+@keyframes ep-tick {
+  0%,
+  20% {
+    transform: translateY(0);
+  }
+  100% {
+    transform: translateY(calc(-1 * var(--ep-tick-row, 24px)));
+  }
+}

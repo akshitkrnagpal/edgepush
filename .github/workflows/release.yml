@@ -1,0 +1,97 @@
+name: Release
+
+# Publishes @edgepush/sdk and @edgepush/cli to npm whenever a tag like
+# v0.3.0 is pushed. Both packages share a version and ship together.
+#
+# Auth: npm Trusted Publishers (OIDC). No NPM_TOKEN secret needed.
+# Configure trusted publishing for each package on npmjs.com:
+#   Package > Settings > Publishing access > Trusted Publishers
+#   Repository:   akshitkrnagpal/edgepush
+#   Workflow:     release.yml
+#   Environment:  (leave blank)
+#
+# Release flow:
+#   pnpm release patch          # bumps both packages, commits, tags
+#   git push origin main
+#   git push origin v<version>  # triggers this workflow
+
+on:
+  push:
+    tags:
+      - "v*"
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write # required for OIDC + provenance
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: pnpm/action-setup@v6
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: pnpm
+          registry-url: https://registry.npmjs.org
+
+      # npm Trusted Publishers (OIDC publish auth) requires npm 11+.
+      # Node 22 ships with npm 10.9 which only supports --provenance
+      # attestation, not tokenless publish. Install npm 11 via npx to
+      # avoid the self-upgrade bug (npm install -g npm@latest breaks
+      # on Node 22.22 with "Cannot find module 'promise-retry'").
+      # npm 10.9 (bundled with Node 22) gets the OIDC token via
+      # setup-node but returns 404 on publish. npm 11+ may handle
+      # Trusted Publisher tokens differently. Use npx to run npm@11
+      # for the publish step without modifying the global install.
+      - name: Check npm version
+        run: echo "npm=$(npm -v) node=$(node -v)"
+
+      - name: Install
+        run: pnpm install --frozen-lockfile
+
+      - name: Verify tag matches at least one package version
+        run: |
+          TAG="${GITHUB_REF#refs/tags/v}"
+          SDK_VERSION=$(node -p "require('./packages/sdk/package.json').version")
+          CLI_VERSION=$(node -p "require('./packages/cli/package.json').version")
+          echo "Tag=$TAG sdk=$SDK_VERSION cli=$CLI_VERSION"
+          if [ "$TAG" != "$SDK_VERSION" ] && [ "$TAG" != "$CLI_VERSION" ]; then
+            echo "Tag $TAG does not match either sdk=$SDK_VERSION or cli=$CLI_VERSION"
+            exit 1
+          fi
+
+      - name: Build
+        run: pnpm --filter @edgepush/sdk --filter @edgepush/cli build
+
+      # pnpm pack handles workspace:* → real version rewriting.
+      # npm publish (11+) handles the OIDC Trusted Publisher handshake.
+      #
+      # Each step skips when the version is already on npm.
+      - name: Pack @edgepush/sdk
+        run: pnpm pack --pack-destination "$RUNNER_TEMP"
+        working-directory: packages/sdk
+
+      - name: Pack @edgepush/cli
+        run: pnpm pack --pack-destination "$RUNNER_TEMP"
+        working-directory: packages/cli
+
+      - name: Publish @edgepush/sdk
+        run: |
+          VERSION=$(node -p "require('./packages/sdk/package.json').version")
+          if npm view "@edgepush/sdk@$VERSION" version >/dev/null 2>&1; then
+            echo "@edgepush/sdk@$VERSION already on npm, skipping"
+            exit 0
+          fi
+          npx npm@11 publish "$RUNNER_TEMP"/edgepush-sdk-*.tgz --access public --provenance
+
+      - name: Publish @edgepush/cli
+        run: |
+          VERSION=$(node -p "require('./packages/cli/package.json').version")
+          if npm view "@edgepush/cli@$VERSION" version >/dev/null 2>&1; then
+            echo "@edgepush/cli@$VERSION already on npm, skipping"
+            exit 0
+          fi
+          npx npm@11 publish "$RUNNER_TEMP"/edgepush-cli-*.tgz --access public --provenance

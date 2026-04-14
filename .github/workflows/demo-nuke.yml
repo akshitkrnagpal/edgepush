@@ -1,0 +1,81 @@
+name: Demo daily reset
+
+# Wipes all user data in the demo instance every day at 04:00 UTC.
+# Drops and re-creates all tables via the migration files, then
+# redeploys the demo API worker to clear DO state.
+#
+# Requires:
+#   - CLOUDFLARE_API_TOKEN repo secret with D1 write + Workers deploy permissions
+
+on:
+  schedule:
+    - cron: "0 4 * * *"
+  workflow_dispatch: # manual trigger from Actions tab
+
+jobs:
+  nuke:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: pnpm/action-setup@v6
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install
+        run: pnpm install --frozen-lockfile
+
+      - name: Wipe demo D1 database
+        working-directory: apps/api
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: a44903142ec31c36316cdfedea489cf6
+        run: |
+          # Drop all user-created data but keep the schema.
+          # Using DELETE FROM instead of DROP TABLE so we don't
+          # need to re-run migrations.
+          pnpm exec wrangler d1 execute edgepush-demo --remote \
+            --env demo \
+            --command "
+              DELETE FROM audit_log;
+              DELETE FROM api_keys;
+              DELETE FROM messages;
+              DELETE FROM webhooks;
+              DELETE FROM apns_credentials;
+              DELETE FROM fcm_credentials;
+              DELETE FROM usage_counters;
+              DELETE FROM subscriptions;
+              DELETE FROM stripe_events;
+              DELETE FROM worker_errors;
+              DELETE FROM apps;
+              DELETE FROM session;
+              DELETE FROM account;
+              DELETE FROM verification;
+              DELETE FROM user;
+            "
+          echo "demo D1 wiped"
+
+      - name: Clear demo KV cache
+        working-directory: apps/api
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: a44903142ec31c36316cdfedea489cf6
+        run: |
+          # Delete all keys in the demo KV namespace.
+          # The list + delete loop handles pagination.
+          pnpm exec wrangler kv key list \
+            --namespace-id 9b32f9ac5fcb4ab6841f662cb2348265 | \
+            node -e "
+              const keys = JSON.parse(require('fs').readFileSync('/dev/stdin','utf8'));
+              for (const k of keys) console.log(k.name);
+            " | while read key; do
+              pnpm exec wrangler kv key delete \
+                --namespace-id 9b32f9ac5fcb4ab6841f662cb2348265 "$key" --force
+            done
+          echo "demo KV cleared"
+
+      - name: Log completion
+        run: echo "demo instance reset at $(date -u)"

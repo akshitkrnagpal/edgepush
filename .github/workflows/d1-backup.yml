@@ -1,0 +1,200 @@
+# Nightly D1 backup.
+#
+# edgepush.dev stores customer-owned secrets in D1 (encrypted APNs .p8
+# keys, FCM service account JSONs, webhook HMAC secrets). Losing the
+# database is a blast radius event — every paying customer would need
+# to re-upload credentials. This workflow takes a nightly snapshot via
+# `wrangler d1 export` and stores it.
+#
+# Two storage tiers, picked based on which secrets are configured:
+#
+#   1. GitHub Actions artifact (always — fallback / short-term).
+#      Retained for 7 days. Pull via the GitHub UI or `gh run download`.
+#
+#   2. R2 bucket (optional — long-term, operator-controlled).
+#      Requires R2_ACCOUNT_ID / R2_ACCESS_KEY_ID / R2_SECRET_ACCESS_KEY
+#      / R2_BUCKET secrets. Skipped cleanly if unset.
+#
+# Encryption:
+#
+#   The dump is gzipped + AES-256-CBC encrypted with BACKUP_ENCRYPTION_KEY
+#   before leaving the runner. The secret is used as a password through
+#   OpenSSL's PBKDF2 (`-pbkdf2 -salt -pass pass:$KEY`), which stores the
+#   random salt in the file header so decrypt round-trips without needing
+#   to track an IV separately. Generate the secret with:
+#       openssl rand -hex 32
+#   If the key is unset, the dump is stored plaintext in the artifact —
+#   that's fine as a last-resort fallback but the operator should set
+#   the key before the hosted tier takes real customer data. The cron
+#   logs a warning when running unencrypted.
+#
+#   A self-test runs after encryption on every invocation: a canary
+#   string is encrypted and immediately decrypted with the same scheme,
+#   and the job fails if the round-trip doesn't match. If we can't
+#   restore in CI, we don't have backups.
+#
+# Restore:
+#
+#   1. Download the artifact or pull from R2.
+#   2. Decrypt:    openssl enc -d -aes-256-cbc -pbkdf2 -pass "pass:$KEY" -in backup.sql.gz.enc -out backup.sql.gz
+#   3. Decompress: gunzip backup.sql.gz
+#   4. Apply:      wrangler d1 execute edgepush --remote --file backup.sql
+#
+# Full restore procedure documented in OPERATOR.md.
+
+name: d1-backup
+
+on:
+  schedule:
+    # 04:00 UTC daily. One hour after the operator digest cron at 03:00
+    # so the two don't fight for wrangler API quota.
+    - cron: "0 4 * * *"
+  workflow_dispatch: {}
+
+concurrency:
+  group: d1-backup
+  cancel-in-progress: false
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: checkout
+        uses: actions/checkout@v6
+
+      - name: setup node
+        uses: actions/setup-node@v6
+        with:
+          node-version: "20"
+
+      - name: install wrangler
+        run: npm install -g wrangler@4
+
+      - name: detect secrets
+        id: detect
+        run: |
+          if [ -n "${{ secrets.CLOUDFLARE_API_TOKEN }}" ]; then
+            echo "have_cf_token=true" >> $GITHUB_OUTPUT
+          else
+            echo "have_cf_token=false" >> $GITHUB_OUTPUT
+          fi
+          if [ -n "${{ secrets.BACKUP_ENCRYPTION_KEY }}" ]; then
+            echo "have_enc_key=true" >> $GITHUB_OUTPUT
+          else
+            echo "have_enc_key=false" >> $GITHUB_OUTPUT
+          fi
+          if [ -n "${{ secrets.R2_BUCKET }}" ]; then
+            echo "have_r2=true" >> $GITHUB_OUTPUT
+          else
+            echo "have_r2=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: fail fast if no Cloudflare token
+        if: steps.detect.outputs.have_cf_token != 'true'
+        run: |
+          echo "::error::CLOUDFLARE_API_TOKEN secret is not set — cannot export D1"
+          echo "Set it at: repo > Settings > Secrets > Actions > New repository secret"
+          exit 1
+
+      - name: warn if encryption key missing
+        if: steps.detect.outputs.have_enc_key != 'true'
+        run: |
+          echo "::warning::BACKUP_ENCRYPTION_KEY is not set — storing plaintext dump."
+          echo "::warning::Generate a key: openssl rand -hex 32 and set as a repo secret."
+
+      - name: timestamp
+        id: ts
+        run: echo "value=$(date -u +%Y-%m-%dT%H-%M-%SZ)" >> $GITHUB_OUTPUT
+
+      - name: export D1
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: a44903142ec31c36316cdfedea489cf6
+        working-directory: apps/api
+        run: |
+          mkdir -p /tmp/d1-backup
+          wrangler d1 export edgepush \
+            --remote \
+            --output /tmp/d1-backup/edgepush-${{ steps.ts.outputs.value }}.sql
+
+      - name: compress
+        run: gzip /tmp/d1-backup/edgepush-${{ steps.ts.outputs.value }}.sql
+
+      - name: encrypt
+        if: steps.detect.outputs.have_enc_key == 'true'
+        env:
+          BACKUP_ENCRYPTION_KEY: ${{ secrets.BACKUP_ENCRYPTION_KEY }}
+        run: |
+          # Password-derived encryption: OpenSSL writes a random salt into
+          # the ciphertext header (the "Salted__" prefix) and recovers it
+          # on decrypt, so we don't have to store the IV out-of-band. The
+          # previous scheme used -K with a random -iv that was never
+          # persisted, which made every encrypted backup undecryptable.
+          openssl enc -aes-256-cbc -pbkdf2 -salt \
+            -pass "pass:$BACKUP_ENCRYPTION_KEY" \
+            -in /tmp/d1-backup/edgepush-${{ steps.ts.outputs.value }}.sql.gz \
+            -out /tmp/d1-backup/edgepush-${{ steps.ts.outputs.value }}.sql.gz.enc
+          rm /tmp/d1-backup/edgepush-${{ steps.ts.outputs.value }}.sql.gz
+
+      - name: verify restore round-trip
+        if: steps.detect.outputs.have_enc_key == 'true'
+        env:
+          BACKUP_ENCRYPTION_KEY: ${{ secrets.BACKUP_ENCRYPTION_KEY }}
+        run: |
+          # Belt + suspenders: a green backup job with an undecryptable
+          # artifact is worse than no backup at all. Encrypt a canary,
+          # decrypt with the exact command from the restore runbook, fail
+          # the job if they don't match. If this step ever fails, do NOT
+          # retry until the operator has verified the restore command
+          # documented in OPERATOR.md still matches what this workflow
+          # emits.
+          canary="$(openssl rand -hex 32)"
+          echo "$canary" > /tmp/canary.txt
+          openssl enc -aes-256-cbc -pbkdf2 -salt \
+            -pass "pass:$BACKUP_ENCRYPTION_KEY" \
+            -in /tmp/canary.txt \
+            -out /tmp/canary.enc
+          openssl enc -d -aes-256-cbc -pbkdf2 \
+            -pass "pass:$BACKUP_ENCRYPTION_KEY" \
+            -in /tmp/canary.enc \
+            -out /tmp/canary.dec
+          if [ "$(cat /tmp/canary.dec)" != "$canary" ]; then
+            echo "::error::canary round-trip failed — backups for this run are NOT recoverable"
+            exit 1
+          fi
+          rm -f /tmp/canary.txt /tmp/canary.enc /tmp/canary.dec
+          echo "canary round-trip verified"
+
+      - name: upload as GH Actions artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: d1-backup-${{ steps.ts.outputs.value }}
+          path: /tmp/d1-backup/edgepush-${{ steps.ts.outputs.value }}.*
+          retention-days: 7
+
+      - name: upload to R2
+        if: steps.detect.outputs.have_r2 == 'true'
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+          R2_ENDPOINT: https://${{ secrets.R2_ACCOUNT_ID }}.r2.cloudflarestorage.com
+          R2_BUCKET: ${{ secrets.R2_BUCKET }}
+        run: |
+          # R2 exposes an S3-compatible API. `aws s3 cp` works unchanged
+          # as long as the endpoint URL is pointed at R2 and the region
+          # is set to auto.
+          for f in /tmp/d1-backup/edgepush-${{ steps.ts.outputs.value }}.*; do
+            aws s3 cp "$f" "s3://$R2_BUCKET/d1-backup/$(basename $f)" \
+              --endpoint-url "$R2_ENDPOINT" \
+              --region auto
+          done
+
+      - name: summary
+        run: |
+          echo "## D1 backup complete" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- timestamp: ${{ steps.ts.outputs.value }}" >> $GITHUB_STEP_SUMMARY
+          echo "- encrypted: ${{ steps.detect.outputs.have_enc_key }}" >> $GITHUB_STEP_SUMMARY
+          echo "- uploaded to R2: ${{ steps.detect.outputs.have_r2 }}" >> $GITHUB_STEP_SUMMARY
+          echo "- artifact retention: 7 days" >> $GITHUB_STEP_SUMMARY

@@ -1,0 +1,92 @@
+---
+import Base from "./Base.astro";
+import { SECTIONS } from "../data/sections";
+
+interface BreadcrumbItem {
+  name: string;
+  url: string;
+}
+
+interface Props {
+  title?: string;
+  description?: string;
+  breadcrumbs?: BreadcrumbItem[];
+}
+
+const {
+  title = "edgepush docs",
+  description = "Send push notifications to iOS and Android with a single API. Full reference for the SDK, CLI, REST API, webhooks, error codes, and self-hosting.",
+  breadcrumbs,
+} = Astro.props;
+
+const pathname = Astro.url.pathname;
+const activeSlug = pathname.startsWith("/docs/")
+  ? pathname.replace(/\/$/, "").split("/")[2]
+  : null;
+
+const resolvedBreadcrumbs: BreadcrumbItem[] = breadcrumbs ?? (
+  activeSlug
+    ? [
+        { name: "home", url: "/" },
+        { name: "docs", url: "/docs" },
+        { name: activeSlug, url: pathname },
+      ]
+    : [
+        { name: "home", url: "/" },
+        { name: "docs", url: "/docs" },
+      ]
+);
+---
+
+<Base title={title} description={description} breadcrumbs={resolvedBreadcrumbs}>
+  <main class="flex-1 font-sans">
+    <nav class="mx-auto flex max-w-[1440px] items-center justify-between border-b border-rule px-6 py-5">
+      <a
+        href="/"
+        class="flex items-center gap-2.5 font-mono text-[15px] font-bold text-text"
+      >
+        <span class="relative flex h-[22px] w-[22px] items-center justify-center border border-accent font-mono text-[11px] font-extrabold text-accent">
+          ep
+        </span>
+        edgepush
+      </a>
+      <div class="flex items-center gap-3 font-mono text-[12px] uppercase tracking-[0.1em]">
+        <a
+          href="https://app.edgepush.dev/sign-in"
+          class="inline-flex min-h-[44px] items-center rounded-none border border-rule-strong px-4 font-semibold text-text hover:border-text"
+        >
+          sign_in
+        </a>
+      </div>
+    </nav>
+
+    <div class="mx-auto grid max-w-[1200px] grid-cols-1 gap-10 px-6 py-16 lg:grid-cols-[200px_1fr]">
+      <aside class="lg:sticky lg:top-10 lg:self-start">
+        <div class="mb-3 font-mono text-[10px] uppercase tracking-[0.14em] text-muted">
+          <span class="text-accent">&ndash;&nbsp;</span> contents
+        </div>
+        <ul class="flex flex-col gap-0.5 font-mono text-[12px]">
+          {SECTIONS.map((s) => {
+            const active = s.slug === activeSlug;
+            return (
+              <li>
+                <a
+                  href={`/docs/${s.slug}`}
+                  class={`block py-1 ${active ? "text-text" : "text-muted-strong hover:text-text"}`}
+                >
+                  <span class={active ? "text-accent" : "text-rule-strong"}>
+                    {active ? "\u251C" : "\u2502"}&nbsp;
+                  </span>
+                  {s.label}
+                </a>
+              </li>
+            );
+          })}
+        </ul>
+      </aside>
+      <div>
+        <slot />
+      </div>
+    </div>
+  </main>
+</Base>

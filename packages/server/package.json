@@ -1,0 +1,41 @@
+{
+  "name": "@edgepush/server",
+  "version": "0.0.0",
+  "private": true,
+  "license": "AGPL-3.0-only",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./do": {
+      "types": "./dist/do.d.ts",
+      "default": "./dist/do.js"
+    }
+  },
+  "scripts": {
+    "build": "tsup",
+    "typecheck": "tsc --noEmit",
+    "dev": "tsup --watch",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate:local": "wrangler d1 migrations apply edgepush --local",
+    "db:migrate:remote": "wrangler d1 migrations apply edgepush --remote"
+  },
+  "dependencies": {
+    "@edgepush/orpc": "workspace:*",
+    "better-auth": "^1.6.2",
+    "drizzle-orm": "^0.45.2",
+    "hono": "^4.12.12",
+    "jose": "^6.2.2",
+    "zod": "^4.3.6"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20260412.1",
+    "drizzle-kit": "^0.31.10",
+    "tsup": "^8.3.5",
+    "typescript": "^6.0.2"
+  }
+}

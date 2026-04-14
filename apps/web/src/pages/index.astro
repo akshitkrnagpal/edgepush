@@ -1,0 +1,763 @@
+---
+import Base from "../layouts/Base.astro";
+
+// Helper types and functions (replacing React components with inline rendering)
+type Tone = "" | "accent" | "text" | "muted" | "muted-strong";
+
+function tone(t: Tone): string {
+  if (t === "accent") return "text-accent";
+  if (t === "text") return "text-text";
+  if (t === "muted") return "text-muted";
+  if (t === "muted-strong") return "text-muted-strong";
+  return "";
+}
+
+interface LogLineProps {
+  ts: string;
+  app: string;
+  id: string;
+  status: "ok" | "warn" | "err" | "pend";
+  label: string;
+  meta: string;
+}
+
+const logLines: LogLineProps[] = [
+  { ts: "2026-04-11T04:25:12.847Z", app: "io.acme.pos", id: "tk_01HX2A9P…4M", status: "ok", label: "delivered", meta: "192ms · apns · device_ios 17.4" },
+  { ts: "2026-04-11T04:25:11.402Z", app: "app.orbit.ios", id: "tk_01HX2A9P…3K", status: "ok", label: "delivered", meta: "144ms · apns · device_ios 17.4" },
+  { ts: "2026-04-11T04:25:10.219Z", app: "com.ridehaus.android", id: "tk_01HX2A9P…3J", status: "pend", label: "queued", meta: "- · fcm · device_android 14" },
+  { ts: "2026-04-11T04:25:09.113Z", app: "io.acme.pos", id: "tk_01HX2A9P…3G", status: "warn", label: "retry 1/3", meta: "apns_rate_limit · backoff 2s" },
+  { ts: "2026-04-11T04:25:07.005Z", app: "com.pixeldiner", id: "tk_01HX2A9P…3A", status: "err", label: "failed", meta: "invalid_token · auto-removed" },
+  { ts: "2026-04-11T04:25:04.882Z", app: "app.orbit.ios", id: "tk_01HX2A9P…2Z", status: "ok", label: "delivered", meta: "210ms · apns · device_ios 17.4" },
+];
+
+function statusColor(status: string): string {
+  if (status === "ok") return "text-success";
+  if (status === "warn") return "text-warning";
+  if (status === "err") return "text-error";
+  return "text-muted";
+}
+
+function statusDot(status: string): string {
+  return status === "pend" ? "○" : "●";
+}
+
+interface CodeLine {
+  lines: Array<Array<[Tone, string]>>;
+  tab: string;
+  label: string;
+}
+
+const nodeTsPanel: CodeLine = {
+  tab: "node.ts",
+  label: "@edgepush/sdk",
+  lines: [
+    [["muted", "// npm install @edgepush/sdk"]],
+    [["accent", "import"], ["", " "], ["muted-strong", "{ Edgepush }"], ["", " "], ["accent", "from"], ["", " "], ["text", '"@edgepush/sdk"'], ["", ";"]],
+    [],
+    [["accent", "const"], ["", " "], ["muted-strong", "client"], ["", " = "], ["accent", "new"], ["", " Edgepush({ "], ["muted-strong", "apiKey"], ["", ": "], ["text", '"com.acme.app|sk_…"'], ["", " });"]],
+    [],
+    [["accent", "await"], ["", " "], ["muted-strong", "client"], ["", ".send({"]],
+    [["", "  "], ["muted-strong", "to"], ["", ":    "], ["text", '"a1b2c3d4…"'], ["", ","]],
+    [["", "  "], ["muted-strong", "title"], ["", ": "], ["text", '"Hello"'], ["", ","]],
+    [["", "  "], ["muted-strong", "body"], ["", ":  "], ["text", '"From Node"'], ["", ","]],
+    [["", "});"]],
+  ],
+};
+
+const curlPanel: CodeLine = {
+  tab: "curl",
+  label: "POST /v1/send",
+  lines: [
+    [["muted", "# any HTTP client works"]],
+    [["text", "curl https://api.edgepush.dev/v1/send \\"]],
+    [["", "  -H "], ["text", "\"authorization: Bearer com.acme.app|sk_…\""], ["", " \\"]],
+    [["", "  -H "], ["text", "\"content-type: application/json\""], ["", " \\"]],
+    [["", "  -d "], ["text", "'{"]],
+    [["", "    "], ["text", "\"messages\": [{"]],
+    [["", "      "], ["text", "\"to\": \"a1b2c3d4…\","]],
+    [["", "      "], ["text", "\"title\": \"Hello\","]],
+    [["", "      "], ["text", "\"body\": \"From curl\""]],
+    [["", "    "], ["text", "}]"]],
+    [["", "  "], ["text", "}'"]],
+  ],
+};
+
+const webhookPanel: CodeLine = {
+  tab: "POST /your/webhook",
+  label: "● 200 OK",
+  lines: [
+    [["muted", "// headers"]],
+    [["muted-strong", "x-edgepush-event"], ["", ":     "], ["text", "message.delivered"]],
+    [["muted-strong", "x-edgepush-signature"], ["", ": "], ["text", "sha256=9f86d081…"]],
+    [["muted-strong", "x-edgepush-id"], ["", ":        "], ["text", "evt_01HX2A9P4M"]],
+    [],
+    [["muted", "// body"]],
+    [["text", "{"]],
+    [["", "  "], ["text", "\"event\""], ["", ": "], ["text", "\"message.delivered\","]],
+    [["", "  "], ["text", "\"id\""], ["", ":    "], ["text", "\"tk_01HX2A9P4M\","]],
+    [["", "  "], ["text", "\"app\""], ["", ":   "], ["text", "\"com.acme.app\","]],
+    [["", "  "], ["text", "\"to\""], ["", ":    "], ["text", "\"a1b2c3d4…\","]],
+    [["", "  "], ["text", "\"platform\""], ["", ": "], ["text", "\"ios\","]],
+    [["", "  "], ["text", "\"latency_ms\""], ["", ": "], ["text", "192"]],
+    [["text", "}"]],
+  ],
+};
+
+interface CompareRowData {
+  label: string;
+  values: [string, string, string, string];
+}
+
+const compareRows: CompareRowData[] = [
+  { label: "open source", values: ["yes", "no", "no", "no"] },
+  { label: "self-hostable", values: ["yes", "no", "no", "no"] },
+  { label: "byo apns + fcm", values: ["yes", "no", "yes", "yes"] },
+  { label: "native token format", values: ["yes", "no (proprietary)", "yes", "yes"] },
+  { label: "rich notifications (images)", values: ["yes", "no", "yes", "yes"] },
+  { label: "apns collapse-id", values: ["yes", "no", "yes", "yes"] },
+  { label: "fine-grained apns push types (voip, location, ...)", values: ["yes", "no", "partial", "partial"] },
+  { label: "reliable silent / background push", values: ["yes", "best effort", "yes", "yes"] },
+  { label: "absolute notification expiration", values: ["yes", "no", "yes", "yes"] },
+  { label: "delivery receipts + retries + dlq", values: ["yes", "best effort", "yes", "yes"] },
+  { label: "fcm topic / condition targeting", values: ["yes", "no", "yes", "yes"] },
+  { label: "webhook retry with backoff", values: ["yes (3x)", "no", "yes", "yes"] },
+  { label: "hard rate ceiling", values: ["per-app, configurable", "600/sec global", "n/a", "n/a"] },
+  { label: "runs on cloudflare workers", values: ["yes", "no", "no", "no"] },
+  { label: "per-message pricing", values: ["no", "no (rate-limited)", "yes", "yes"] },
+  { label: "vendor lock-in", values: ["none", "high", "medium", "medium"] },
+  { label: "cost (10k pushes/mo)", values: ["$0", "$0", "≈ $0", "≈ $25"] },
+];
+
+function isPositive(v: string): boolean {
+  return v === "yes" || v === "$0" || v === "none" || v.startsWith("per-app");
+}
+
+function isNegative(v: string): boolean {
+  return v === "no" || v === "best effort";
+}
+
+interface PricingCardData {
+  tag: string;
+  title: string;
+  priceSuffix: string;
+  tagline: string;
+  body: string;
+  features: string[];
+  cta: { href: string; label: string; external?: boolean };
+}
+
+const pricingCards: PricingCardData[] = [
+  {
+    tag: "free",
+    title: "$0",
+    priceSuffix: "/ forever",
+    tagline: "edgepush.dev hosted",
+    body: "No credit card. The fastest way to try edgepush against a real device. Sized for side projects and indie apps that haven't shipped yet.",
+    cta: { href: "/sign-in", label: "$ sign_in_with_github" },
+    features: ["1 app", "10K events / month", "7-day delivery log", "BYO apns + fcm credentials", "delivery receipts + webhooks", "support via github issues"],
+  },
+  {
+    tag: "pro",
+    title: "$29",
+    priceSuffix: "/ month",
+    tagline: "edgepush.dev hosted",
+    body: "For indie shippers running a few apps in production. Same infrastructure as free, just with the room to actually use it. Priority email support direct from the operator.",
+    cta: { href: "/pricing", label: "$ upgrade_to_pro" },
+    features: ["3 apps", "50K events / month", "14-day delivery log", "everything in free, plus:", "priority email support", "credential health alerts"],
+  },
+  {
+    tag: "self-host",
+    title: "$0",
+    priceSuffix: "/ forever",
+    tagline: "your cloudflare account",
+    body: "Same code, your infra, your data. Cloudflare's free tier covers most apps. You own the credentials, the rate limits, the deploy cadence. No edgepush.dev in the middle.",
+    cta: { href: "/selfhost", label: "$ self_host_guide" },
+    features: ["unlimited apps + events", "2 wrangler deploys to go live", "agpl-3.0 server source", "your D1, KV, queue, DO", "your apns + fcm credentials", "no telemetry, no operator"],
+  },
+];
+
+interface FaqItemData {
+  q: string;
+  a: string;
+}
+
+const faqItems: FaqItemData[] = [
+  { q: "I already have APNs and FCM credentials. Does edgepush use them?", a: "Yes, that's the whole point. Upload your existing .p8 key and Firebase service account JSON. edgepush encrypts and stores them. You keep full ownership." },
+  { q: "How are my credentials protected?", a: "Encrypted with AES-GCM in a Cloudflare D1 row scoped to your app. The encryption key is a Worker secret, never in the database. The raw credential is never returned by the API after upload." },
+  { q: "How do I migrate from Expo Push?", a: "Switch your app from getExpoPushTokenAsync to getDevicePushTokenAsync (one function name change), point your server at /v1/send. That's the entire migration. edgepush uses native APNs and FCM tokens, not Expo's proprietary wrapper." },
+  { q: "What are the rate limits?", a: "1000 pushes per minute per app (configurable). Per-app token bucket via a Durable Object. Self-hosters can tune the limit to anything they want." },
+  { q: "Do I need to store device tokens with edgepush?", a: "No. edgepush is a dispatch layer. You manage tokens in your own database. Each receipt tells you when a token is invalid so you can prune it." },
+  { q: "Is this stable enough for production?", a: "v1.0 ships the full pipeline: send, dispatch, receipts, webhooks, credential health probes, nightly backups, Stripe billing, per-app rate limits, webhook retry queue, FCM topics. 70 unit tests. Semver from here." },
+  { q: "Why does this run on Cloudflare?", a: "Workers + D1 + Queues + Durable Objects is the only stack where the entire push pipeline runs on free-tier edge primitives. No cold starts. No per-region routing. One runtime, globally." },
+  { q: "What about web push or email?", a: "edgepush does native iOS and Android push. That's the scope. For multi-channel orchestration, use a dedicated tool alongside edgepush." },
+];
+
+const currentYear = new Date().getFullYear();
+
+// Pre-render code panels as HTML strings (Astro's template doesn't handle
+// nested .map() with ternary + Fragment well)
+function renderCodePanel(panel: CodeLine): string {
+  return panel.lines.map(line => {
+    if (line.length === 0) return "\n";
+    return line.map(([t, text]) => {
+      const cls = tone(t);
+      const escaped = text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+      return cls ? `<span class="${cls}">${escaped}</span>` : escaped;
+    }).join("") + "\n";
+  }).join("");
+}
+
+const nodeTsHtml = renderCodePanel(nodeTsPanel);
+const curlHtml = renderCodePanel(curlPanel);
+const webhookHtml = renderCodePanel(webhookPanel);
+---
+
+<Base>
+  <main class="flex-1 font-sans">
+    <!-- Meta strip -->
+    <div class="border-b border-rule bg-surface font-mono text-[11px] text-muted">
+      <div class="mx-auto flex max-w-[1440px] items-center gap-6 px-6 py-2 uppercase tracking-[0.12em]">
+        <span>
+          <span class="text-accent">●</span> edgepush.dev
+        </span>
+        <a
+          href="https://github.com/akshitkrnagpal/edgepush"
+          target="_blank"
+          rel="noopener noreferrer"
+          class="hidden hover:text-text sm:inline"
+        >
+          github.com/akshitkrnagpal/edgepush
+        </a>
+        <span class="ml-auto hidden sm:inline">agpl-3.0 + mit dual</span>
+        <span class="hidden sm:inline">
+          <span class="text-success">●</span> live
+        </span>
+      </div>
+    </div>
+
+    <!-- Nav -->
+    <nav class="mx-auto flex max-w-[1440px] items-center justify-between border-b border-rule px-6 py-5">
+      <a
+        href="/"
+        class="flex items-center gap-2.5 font-mono text-[15px] font-bold text-text"
+      >
+        <span class="relative flex h-[22px] w-[22px] items-center justify-center border border-accent font-mono text-[11px] font-extrabold text-accent">
+          ep
+          <span class="absolute -left-[2px] -top-[2px] h-[3px] w-[3px] bg-accent"></span>
+          <span class="absolute -right-[2px] -bottom-[2px] h-[3px] w-[3px] bg-accent"></span>
+        </span>
+        edgepush
+      </a>
+      <ul class="hidden items-center gap-7 font-mono text-[12px] uppercase tracking-[0.1em] sm:flex">
+        <li>
+          <span class="text-accent">├&nbsp;</span>
+          <span class="text-text">landing</span>
+        </li>
+        <li>
+          <a href="/docs" class="text-muted hover:text-text">
+            docs
+          </a>
+        </li>
+        <li>
+          <a
+            href="https://github.com/akshitkrnagpal/edgepush"
+            target="_blank"
+            rel="noopener noreferrer"
+            class="text-muted hover:text-text"
+          >
+            github
+          </a>
+        </li>
+      </ul>
+      <div class="flex items-center gap-3">
+        <a
+          href="https://app.edgepush.dev/sign-in"
+          class="hidden min-h-[44px] items-center rounded-none border border-rule-strong px-4 font-mono text-[12px] font-semibold text-text hover:border-text sm:inline-flex"
+        >
+          sign_in
+        </a>
+        <a
+          href="https://app.edgepush.dev/sign-in"
+          class="inline-flex min-h-[44px] items-center gap-2 rounded-none bg-text px-4 font-mono text-[12px] font-semibold text-black hover:bg-accent"
+        >
+          <span class="text-accent">$</span> get_started
+        </a>
+      </div>
+    </nav>
+
+    <!-- Hero -->
+    <section class="mx-auto grid max-w-[1440px] grid-cols-1 items-start gap-12 px-6 pt-16 pb-12 lg:grid-cols-[1.15fr_1fr] lg:gap-16 lg:pt-20">
+      <div>
+        <h1 class="mb-6 font-mono text-[56px] leading-[0.92] font-extrabold tracking-[-0.04em] text-text sm:text-[80px] lg:text-[96px]">
+          One API for
+          <br />
+          <span class="text-accent">iOS</span> and <span class="text-accent">Android</span>
+          <br />
+          push<span class="text-muted">.</span>
+        </h1>
+        <p class="mb-8 max-w-[540px] font-sans text-[18px] leading-[1.55] text-muted-strong sm:text-[20px]">
+          edgepush is an open-source push notification API for iOS and
+          Android, running on Cloudflare Workers. Bring your own APNs and
+          FCM credentials, send from one endpoint, own your delivery data.
+          Free hosted tier or self-host on your account.
+        </p>
+        <div class="mb-4 flex flex-wrap gap-3">
+          <a
+            href="https://app.edgepush.dev/sign-in"
+            class="inline-flex items-center gap-2 rounded-none bg-accent px-6 py-3.5 font-mono text-[13px] font-bold text-black hover:bg-accent-hover"
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+              <path d="M12 .297c-6.63 0-12 5.373-12 12 0 5.303 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61C4.422 18.07 3.633 17.7 3.633 17.7c-1.087-.744.084-.729.084-.729 1.205.084 1.838 1.236 1.838 1.236 1.07 1.835 2.809 1.305 3.495.998.108-.776.417-1.305.76-1.605-2.665-.3-5.466-1.332-5.466-5.93 0-1.31.465-2.38 1.235-3.22-.135-.303-.54-1.523.105-3.176 0 0 1.005-.322 3.3 1.23.96-.267 1.98-.4 3-.405 1.02.005 2.04.138 3 .405 2.28-1.552 3.285-1.23 3.285-1.23.645 1.653.24 2.873.12 3.176.765.84 1.23 1.91 1.23 3.22 0 4.61-2.805 5.625-5.475 5.92.42.36.81 1.096.81 2.22 0 1.606-.015 2.896-.015 3.286 0 .315.21.69.825.57C20.565 22.092 24 17.592 24 12.297c0-6.627-5.373-12-12-12" />
+            </svg>
+            sign_in_with_github
+          </a>
+          <a
+            href="/docs"
+            class="inline-flex items-center gap-2 rounded-none border border-rule-strong px-5 py-3 font-mono text-[12px] font-semibold text-text hover:border-text"
+          >
+            read_the_docs <span class="text-muted">─&gt;</span>
+          </a>
+        </div>
+        <p class="mb-10 font-mono text-[11px] text-muted">
+          · no credit card · agpl-3.0 + mit
+        </p>
+      </div>
+
+      <!-- Code panel -->
+      <div class="border border-rule-strong bg-surface font-mono text-[13px] leading-[1.65]">
+        <div class="flex items-center justify-between border-b border-rule px-4 py-2.5 text-[11px] uppercase tracking-[0.1em] text-muted">
+          <div class="flex items-center gap-4">
+            <span>
+              <span class="text-accent">├&nbsp;</span>
+              <span class="text-text">server.ts</span>
+            </span>
+          </div>
+          <span>
+            <span class="text-accent">$</span> example
+          </span>
+        </div>
+        <pre class="overflow-x-auto p-5 text-text whitespace-pre"><code><span class="text-muted">// rich notification, collapse-id, expiration.</span>
+<span class="text-muted">// the full APNs surface, on a single line per field.</span>
+
+<span class="text-accent">import</span> <span class="text-muted-strong">&#123; Edgepush &#125;</span> <span class="text-accent">from</span> <span class="text-text">"@edgepush/sdk"</span>;
+
+<span class="text-accent">const</span> <span class="text-muted-strong">edge</span> = <span class="text-accent">new</span> Edgepush(&#123;
+  <span class="text-muted-strong">apiKey</span>: process.env.<span class="text-muted-strong">EDGEPUSH_API_KEY</span>,
+&#125;);
+
+<span class="text-accent">await</span> <span class="text-muted-strong">edge</span>.send(&#123;
+  <span class="text-muted-strong">to</span>:              <span class="text-text">"a1b2c3d4…"</span>,
+  <span class="text-muted-strong">title</span>:           <span class="text-text">"New order #4271"</span>,
+  <span class="text-muted-strong">body</span>:            <span class="text-text">"2x flat white, table 3"</span>,
+  <span class="text-muted-strong">image</span>:           <span class="text-text">"https://cdn.acme.app/o/4271.jpg"</span>,
+  <span class="text-muted-strong">mutableContent</span>:  <span class="text-accent">true</span>,  <span class="text-muted">// iOS NSE</span>
+  <span class="text-muted-strong">collapseId</span>:      <span class="text-text">"order-4271"</span>,  <span class="text-muted">// replace prior</span>
+  <span class="text-muted-strong">expirationAt</span>:    <span class="text-muted-strong">Date</span>.now() / <span class="text-text">1000</span> + <span class="text-text">600</span>,
+&#125;);
+
+<span class="text-muted">// → ticket.id: tk_01HX2A9P4M  <span class="text-success">●</span> queued</span></code></pre>
+      </div>
+    </section>
+
+    <!-- Log stream -->
+    <section class="mx-auto max-w-[1440px] px-6 pb-16">
+      <p class="mb-3 border-t border-rule pt-6 font-sans text-[14px] text-muted-strong">
+        Every send tracked in real time. Delivered, retried, failed, queued.
+      </p>
+      <div class="flex items-center justify-between py-3 font-mono text-[11px] uppercase tracking-[0.12em] text-muted">
+        <span>
+          <span class="text-accent">tail -f</span> push-events.log
+        </span>
+        <span>
+          <span class="text-accent">$</span> example
+        </span>
+      </div>
+      <div class="overflow-hidden border border-rule-strong bg-surface px-5 py-4 font-mono text-[12.5px] leading-[1.9] text-muted-strong">
+        {logLines.map((line) => (
+          <div class="grid grid-cols-[auto_1fr] gap-x-4 whitespace-nowrap sm:grid-cols-[190px_minmax(140px,auto)_minmax(180px,auto)_90px_1fr]">
+            <span class="text-muted">{line.ts}</span>
+            <span class="text-text">{line.app}</span>
+            <span class="hidden text-muted sm:inline">{line.id}</span>
+            <span class={statusColor(line.status)}>
+              {statusDot(line.status)} {line.label}
+            </span>
+            <span class="hidden sm:inline">{line.meta}</span>
+          </div>
+        ))}
+      </div>
+    </section>
+
+    <!-- Quickstart - multi-language code panels -->
+    <section class="mx-auto max-w-[1440px] border-t border-rule px-6 py-12">
+      <div class="mb-8 flex items-baseline justify-between gap-4">
+        <div class="font-mono text-[11px] uppercase tracking-[0.14em] text-muted">
+          <span class="text-accent">─&nbsp;</span> quickstart
+        </div>
+        <div class="font-mono text-[11px] uppercase tracking-[0.12em] text-muted">
+          send from any runtime
+        </div>
+      </div>
+      <div class="grid grid-cols-1 gap-6 lg:grid-cols-2">
+        <!-- Node.ts panel -->
+        <div class="border border-rule-strong bg-surface font-mono text-[12.5px] leading-[1.65]">
+          <div class="flex items-center justify-between border-b border-rule px-4 py-2.5 text-[11px] uppercase tracking-[0.1em] text-muted">
+            <span>
+              <span class="text-accent">├&nbsp;</span>
+              <span class="text-text">{nodeTsPanel.tab}</span>
+            </span>
+            <span>{nodeTsPanel.label}</span>
+          </div>
+          <pre class="overflow-x-auto p-5 whitespace-pre"><code set:html={nodeTsHtml} /></pre>
+        </div>
+        <!-- Curl panel -->
+        <div class="border border-rule-strong bg-surface font-mono text-[12.5px] leading-[1.65]">
+          <div class="flex items-center justify-between border-b border-rule px-4 py-2.5 text-[11px] uppercase tracking-[0.1em] text-muted">
+            <span>
+              <span class="text-accent">├&nbsp;</span>
+              <span class="text-text">{curlPanel.tab}</span>
+            </span>
+            <span>{curlPanel.label}</span>
+          </div>
+          <pre class="overflow-x-auto p-5 whitespace-pre"><code set:html={curlHtml} /></pre>
+        </div>
+      </div>
+      <div class="mt-6 font-mono text-[11px] text-muted">
+        react native? bun? deno? same SDK. needs only <span class="text-text">fetch</span>.
+      </div>
+    </section>
+
+    <!-- How it works -->
+    <section class="mx-auto max-w-[1440px] border-t border-rule px-6 py-12">
+      <div class="mb-8 font-mono text-[11px] uppercase tracking-[0.14em] text-muted">
+        <span class="text-accent">─&nbsp;</span> how it works
+      </div>
+      <div class="grid grid-cols-1 gap-10 md:grid-cols-3">
+        <div>
+          <div class="mb-3 font-mono text-[11px] uppercase tracking-[0.14em] text-muted">
+            <span class="text-accent">├&nbsp;</span>
+            01
+          </div>
+          <h3 class="mb-2 font-mono text-[18px] font-bold text-text">
+            bring your credentials
+          </h3>
+          <p class="font-sans text-[14px] leading-[1.6] text-muted-strong">
+            Upload your APNs .p8 key and Firebase service account JSON in the dashboard. Both are encrypted with AES-GCM before being written to D1.
+          </p>
+        </div>
+        <div>
+          <div class="mb-3 font-mono text-[11px] uppercase tracking-[0.14em] text-muted">
+            <span class="text-accent">├&nbsp;</span>
+            02
+          </div>
+          <h3 class="mb-2 font-mono text-[18px] font-bold text-text">
+            generate an api key
+          </h3>
+          <p class="font-sans text-[14px] leading-[1.6] text-muted-strong">
+            Keys are scoped to a single app and prefixed with the package name so they self-identify in logs: com.acme.myapp|sk_...
+          </p>
+        </div>
+        <div class="border border-accent bg-surface p-6">
+          <div class="mb-3 font-mono text-[11px] uppercase tracking-[0.14em] text-accent">
+            <span class="text-accent">├&nbsp;</span>
+            03
+          </div>
+          <h3 class="mb-2 font-mono text-[22px] font-bold text-text">
+            send from anywhere
+          </h3>
+          <p class="font-sans text-[15px] leading-[1.6] text-muted-strong">
+            Use the SDK or POST directly to /v1/send. Dispatched through
+            Cloudflare Queues with automatic retries and a dead letter queue.
+            iOS, Android, topics, rich images, collapse, voip. One call.
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Webhook example -->
+    <section class="mx-auto max-w-[1440px] border-t border-rule px-6 py-12">
+      <div class="mb-8 flex items-baseline justify-between gap-4">
+        <div class="font-mono text-[11px] uppercase tracking-[0.14em] text-muted">
+          <span class="text-accent">─&nbsp;</span> webhook events
+        </div>
+        <div class="font-mono text-[11px] uppercase tracking-[0.12em] text-muted">
+          HMAC-signed POST
+        </div>
+      </div>
+      <div class="grid grid-cols-1 gap-10 lg:grid-cols-[1fr_1.2fr] lg:items-start">
+        <div>
+          <h3 class="mb-3 font-mono text-[20px] font-bold text-text">
+            Push your delivery state.
+          </h3>
+          <p class="mb-4 max-w-md font-sans text-[15px] leading-[1.6] text-muted-strong">
+            Configure a webhook URL in the dashboard and edgepush will POST
+            every state change to your endpoint with an HMAC-SHA256 signature
+            over the raw body. No polling required.
+          </p>
+          <ul class="space-y-2 font-mono text-[12px] text-muted-strong">
+            <li>
+              <span class="text-success">●</span> message.delivered
+            </li>
+            <li>
+              <span class="text-warning">●</span> message.retry
+            </li>
+            <li>
+              <span class="text-error">●</span> message.failed
+            </li>
+            <li>
+              <span class="text-pending">○</span> message.invalid_token
+            </li>
+          </ul>
+        </div>
+        <!-- Webhook code panel -->
+        <div class="border border-rule-strong bg-surface font-mono text-[12.5px] leading-[1.65]">
+          <div class="flex items-center justify-between border-b border-rule px-4 py-2.5 text-[11px] uppercase tracking-[0.1em] text-muted">
+            <span>
+              <span class="text-accent">├&nbsp;</span>
+              <span class="text-text">{webhookPanel.tab}</span>
+            </span>
+            <span><span class="text-success">●</span> 200 OK</span>
+          </div>
+          <pre class="overflow-x-auto p-5 whitespace-pre"><code set:html={webhookHtml} /></pre>
+        </div>
+      </div>
+    </section>
+
+    <!-- Features -->
+    <section class="mx-auto max-w-[1440px] border-t border-rule px-6 py-12">
+      <div class="mb-8 font-mono text-[11px] uppercase tracking-[0.14em] text-muted">
+        <span class="text-accent">─&nbsp;</span> built for production
+      </div>
+      <div class="grid grid-cols-1 gap-8 md:grid-cols-2 lg:grid-cols-3">
+        <div class="border-t border-rule pt-6">
+          <h3 class="mb-2 font-mono text-[16px] font-bold text-text">fully open source</h3>
+          <p class="font-sans text-[15px] leading-[1.65] text-muted-strong">AGPL-3.0 server, MIT SDK and CLI. Self-host on your own Cloudflare account, two wrangler deploys, no telemetry. Fork the repo and own it forever.</p>
+        </div>
+        <div class="border-t border-rule pt-6">
+          <h3 class="mb-2 font-mono text-[16px] font-bold text-text">native tokens</h3>
+          <p class="font-sans text-[15px] leading-[1.65] text-muted-strong">No proprietary token format. You use real APNs device tokens and FCM registration tokens. Migrate in and out at will.</p>
+        </div>
+        <div class="border-t border-rule pt-6">
+          <h3 class="mb-2 font-mono text-[16px] font-bold text-text">delivery receipts</h3>
+          <p class="font-sans text-[15px] leading-[1.65] text-muted-strong">Every send returns a ticket id. Poll the receipt or subscribe to webhooks for delivered and failed events.</p>
+        </div>
+        <div class="border-t border-rule pt-6">
+          <h3 class="mb-2 font-mono text-[16px] font-bold text-text">rate limiting built-in</h3>
+          <p class="font-sans text-[15px] leading-[1.65] text-muted-strong">Per-app token bucket via Durable Objects. Survives Worker restarts, scoped to each app, retries with backoff on overflow.</p>
+        </div>
+        <div class="border-t border-rule pt-6">
+          <h3 class="mb-2 font-mono text-[16px] font-bold text-text">webhook events</h3>
+          <p class="font-sans text-[15px] leading-[1.65] text-muted-strong">HMAC-signed POSTs when a message is delivered, retried, or failed. Invalid tokens are flagged on the receipt so your code can prune them.</p>
+        </div>
+        <div class="border-t border-rule pt-6">
+          <h3 class="mb-2 font-mono text-[16px] font-bold text-text">encrypted credentials</h3>
+          <p class="font-sans text-[15px] leading-[1.65] text-muted-strong">Your APNs .p8 and FCM service account JSON are encrypted at rest. The raw key is never exposed via the API.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Comparison table -->
+    <section class="mx-auto max-w-[1440px] border-t border-rule px-6 py-12">
+      <div class="mb-8 flex items-baseline justify-between gap-4">
+        <div class="font-mono text-[11px] uppercase tracking-[0.14em] text-muted">
+          <span class="text-accent">─&nbsp;</span> how it compares
+        </div>
+        <div class="font-mono text-[11px] uppercase tracking-[0.12em] text-muted">
+          edgepush vs hosted push providers
+        </div>
+      </div>
+      <div class="overflow-x-auto border border-rule-strong bg-surface">
+        <table class="w-full font-mono text-[12.5px]">
+          <thead>
+            <tr class="border-b border-rule-strong bg-[#111111] text-left text-[11px] uppercase tracking-[0.12em] text-muted-strong">
+              <th class="px-5 py-3.5 font-medium"> </th>
+              <th class="px-5 py-3.5 font-bold text-accent">edgepush</th>
+              <th class="px-5 py-3.5 font-medium">expo push</th>
+              <th class="px-5 py-3.5 font-medium">onesignal</th>
+              <th class="px-5 py-3.5 font-medium">knock</th>
+            </tr>
+          </thead>
+          <tbody class="text-muted-strong">
+            {compareRows.map((row) => (
+              <tr class="border-b border-rule last:border-b-0">
+                <td class="px-5 py-3 text-text">{row.label}</td>
+                {row.values.map((v, i) => {
+                  const positive = isPositive(v);
+                  const negative = isNegative(v);
+                  return (
+                    <td
+                      class={`px-5 py-3 ${
+                        i === 0 && positive
+                          ? "text-success font-bold"
+                          : negative
+                            ? "text-error"
+                            : "text-muted-strong"
+                      }`}
+                    >
+                      {i === 0 && positive ? <span class="mr-1">●</span> : null}
+                      {v}
+                    </td>
+                  );
+                })}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <p class="mt-4 font-sans text-[12px] text-muted">
+        Comparison reflects publicly documented pricing and features as of
+        April 2026. Other providers may have changed; check their docs.
+      </p>
+    </section>
+
+    <!-- Pricing -->
+    <section class="mx-auto max-w-[1440px] border-t border-rule px-6 py-12">
+      <div class="mb-8 flex items-baseline justify-between gap-4">
+        <div class="font-mono text-[11px] uppercase tracking-[0.14em] text-muted">
+          <span class="text-accent">─&nbsp;</span> pricing
+        </div>
+        <a
+          href="/pricing"
+          class="font-mono text-[11px] uppercase tracking-[0.12em] text-muted hover:text-text"
+        >
+          full pricing →
+        </a>
+      </div>
+      <div class="grid grid-cols-1 gap-6 lg:grid-cols-3">
+        {pricingCards.map((card) => (
+          <div class="flex flex-col border border-rule-strong bg-surface p-8">
+            <div class="mb-4 font-mono text-[11px] uppercase tracking-[0.14em] text-muted">
+              <span class="text-accent">├&nbsp;</span>
+              {card.tag}
+            </div>
+            <div class="mb-1 flex items-baseline gap-3">
+              <span class="font-mono text-[44px] font-extrabold leading-none text-text">
+                {card.title}
+              </span>
+              <span class="font-mono text-[12px] text-muted">{card.priceSuffix}</span>
+            </div>
+            <div class="mb-5 font-mono text-[11px] uppercase tracking-[0.12em] text-muted">
+              {card.tagline}
+            </div>
+            <p class="mb-6 max-w-md font-sans text-[14px] leading-[1.6] text-muted-strong">
+              {card.body}
+            </p>
+            <ul class="mb-2 space-y-2 font-mono text-[12px] text-muted-strong">
+              {card.features.map((f) => (
+                <li>
+                  <span class="text-accent">●</span> {f}
+                </li>
+              ))}
+            </ul>
+            {card.cta.external ? (
+              <a
+                href={card.cta.href}
+                target="_blank"
+                rel="noopener noreferrer"
+                class="mt-6 inline-flex items-center gap-2 rounded-none bg-text px-5 py-3 font-mono text-[12px] font-semibold text-black hover:bg-accent"
+              >
+                {card.cta.label}
+              </a>
+            ) : (
+              <a href={card.cta.href} class="mt-6 inline-flex items-center gap-2 rounded-none bg-text px-5 py-3 font-mono text-[12px] font-semibold text-black hover:bg-accent">
+                {card.cta.label}
+              </a>
+            )}
+          </div>
+        ))}
+      </div>
+    </section>
+
+    <!-- FAQ -->
+    <section class="mx-auto max-w-[1440px] border-t border-rule px-6 py-12">
+      <div class="mb-8 font-mono text-[11px] uppercase tracking-[0.14em] text-muted">
+        <span class="text-accent">─&nbsp;</span> faq
+      </div>
+      <div class="grid grid-cols-1 gap-x-12 gap-y-8 md:grid-cols-2">
+        {faqItems.map((item) => (
+          <div>
+            <h3 class="mb-2 font-mono text-[14px] font-bold text-text">
+              <span class="text-accent">?&nbsp;</span>
+              {item.q}
+            </h3>
+            <p class="font-sans text-[14px] leading-[1.6] text-muted-strong">
+              {item.a}
+            </p>
+          </div>
+        ))}
+      </div>
+    </section>
+
+    <!-- CTA band -->
+    <section class="mx-auto max-w-[1440px] px-6 py-24">
+      <div class="border border-accent bg-surface px-8 py-20 sm:px-16">
+        <div class="mb-4 font-mono text-[11px] uppercase tracking-[0.14em] text-accent">
+          <span class="text-accent">$&nbsp;</span> ready_to_ship
+        </div>
+        <h2 class="mb-4 max-w-2xl font-mono text-3xl font-bold leading-[1.05] tracking-[-0.02em] text-text sm:text-5xl">
+          Ship pushes by <span class="text-accent">end of day</span>.
+        </h2>
+        <p class="mb-10 max-w-xl font-sans text-[17px] leading-[1.55] text-muted-strong">
+          Free hosted tier. Pro is $29/mo when you outgrow it. Or run the
+          whole stack on your own Cloudflare account.
+        </p>
+        <div class="flex flex-wrap gap-3">
+          <a
+            href="https://app.edgepush.dev/sign-in"
+            class="inline-flex items-center gap-2 rounded-none bg-accent px-6 py-3.5 font-mono text-[13px] font-bold text-black hover:bg-accent-hover"
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+              <path d="M12 .297c-6.63 0-12 5.373-12 12 0 5.303 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61C4.422 18.07 3.633 17.7 3.633 17.7c-1.087-.744.084-.729.084-.729 1.205.084 1.838 1.236 1.838 1.236 1.07 1.835 2.809 1.305 3.495.998.108-.776.417-1.305.76-1.605-2.665-.3-5.466-1.332-5.466-5.93 0-1.31.465-2.38 1.235-3.22-.135-.303-.54-1.523.105-3.176 0 0 1.005-.322 3.3 1.23.96-.267 1.98-.4 3-.405 1.02.005 2.04.138 3 .405 2.28-1.552 3.285-1.23 3.285-1.23.645 1.653.24 2.873.12 3.176.765.84 1.23 1.91 1.23 3.22 0 4.61-2.805 5.625-5.475 5.92.42.36.81 1.096.81 2.22 0 1.606-.015 2.896-.015 3.286 0 .315.21.69.825.57C20.565 22.092 24 17.592 24 12.297c0-6.627-5.373-12-12-12" />
+            </svg>
+            sign_in_with_github
+          </a>
+          <a
+            href="https://github.com/akshitkrnagpal/edgepush"
+            target="_blank"
+            rel="noopener noreferrer"
+            class="inline-flex items-center gap-2 rounded-none border border-rule-strong px-5 py-3 font-mono text-[12px] font-semibold text-text hover:border-text"
+          >
+            star_on_github <span class="text-muted">─&gt;</span>
+          </a>
+        </div>
+      </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="mx-auto grid max-w-[1440px] grid-cols-1 gap-10 border-t border-rule px-6 py-12 font-mono text-[11px] text-muted sm:grid-cols-[1fr_auto_auto_auto]">
+      <div class="flex items-start gap-3">
+        <span class="relative flex h-[22px] w-[22px] items-center justify-center border border-accent font-mono text-[11px] font-extrabold text-accent">
+          ep
+          <span class="absolute -left-[2px] -top-[2px] h-[3px] w-[3px] bg-accent"></span>
+          <span class="absolute -right-[2px] -bottom-[2px] h-[3px] w-[3px] bg-accent"></span>
+        </span>
+        <div>
+          <p class="text-text">edgepush</p>
+          <p class="mt-1">
+            &copy; {currentYear} · server agpl-3.0 · sdk + cli mit
+          </p>
+          <p class="mt-1">v1.0</p>
+        </div>
+      </div>
+      <div class="flex flex-col gap-2">
+        <p class="mb-1 uppercase tracking-[0.12em] text-text">product</p>
+        <a href="/docs" class="hover:text-text">docs</a>
+        <a href="/pricing" class="hover:text-text">pricing</a>
+        <a href="https://app.edgepush.dev/sign-in" class="hover:text-text">dashboard</a>
+        <a href="https://app.edgepush.dev/" class="hover:text-text">self-host</a>
+      </div>
+      <div class="flex flex-col gap-2">
+        <p class="mb-1 uppercase tracking-[0.12em] text-text">packages</p>
+        <a href="https://www.npmjs.com/package/@edgepush/sdk" target="_blank" rel="noopener noreferrer" class="hover:text-text">@edgepush/sdk</a>
+        <a href="https://www.npmjs.com/package/@edgepush/cli" target="_blank" rel="noopener noreferrer" class="hover:text-text">@edgepush/cli</a>
+        <a href="https://github.com/akshitkrnagpal/edgepush/releases" target="_blank" rel="noopener noreferrer" class="hover:text-text">releases</a>
+      </div>
+      <div class="flex flex-col gap-2">
+        <p class="mb-1 uppercase tracking-[0.12em] text-text">more</p>
+        <a href="https://github.com/akshitkrnagpal/edgepush" target="_blank" rel="noopener noreferrer" class="hover:text-text">github</a>
+        <a href="https://github.com/akshitkrnagpal/edgepush/issues" target="_blank" rel="noopener noreferrer" class="hover:text-text">issues</a>
+        <a href="/legal/privacy" class="hover:text-text">privacy</a>
+        <a href="/legal/terms" class="hover:text-text">terms</a>
+      </div>
+    </footer>
+  </main>
+</Base>

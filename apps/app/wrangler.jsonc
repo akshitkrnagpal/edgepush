@@ -1,0 +1,66 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "main": ".open-next/worker.js",
+  "name": "edgepush-app",
+  "compatibility_date": "2026-04-10",
+  "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
+  "workers_dev": true,
+  "observability": {
+    "enabled": true,
+    "traces": { "enabled": true }
+  },
+
+  // The app worker handles dashboard + auth + the embedded API.
+  // D1 + KV are needed for dashboard reads/writes and auth sessions.
+  // Queue + DO bindings stay in apps/api because OpenNext can't
+  // export DurableObject classes.
+
+  "routes": [
+    { "pattern": "app.edgepush.dev", "custom_domain": true }
+  ],
+  "assets": {
+    "directory": ".open-next/assets",
+    "binding": "ASSETS"
+  },
+  "vars": {
+    "BETTER_AUTH_URL": "https://app.edgepush.dev",
+    "DASHBOARD_URL": "https://app.edgepush.dev",
+    "HOSTED_MODE": "true"
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "edgepush",
+      "database_id": "33dc63eb-f54e-49bb-a91e-0f24ddcda721",
+      "migrations_dir": "../../packages/server/migrations"
+    }
+  ],
+  "kv_namespaces": [
+    { "binding": "CACHE", "id": "a97336dff01c482ea90acdf4aac4233e" }
+  ],
+
+  "env": {
+    "demo": {
+      "routes": [
+        { "pattern": "demo.edgepush.dev", "custom_domain": true }
+      ],
+      "vars": {
+        "BETTER_AUTH_URL": "https://demo.edgepush.dev",
+        "DASHBOARD_URL": "https://demo.edgepush.dev",
+        "HOSTED_MODE": "false",
+        "DEMO_MODE": "true"
+      },
+      "d1_databases": [
+        {
+          "binding": "DB",
+          "database_name": "edgepush-demo",
+          "database_id": "f44b1fdc-6823-4229-8c87-37f722ac0fc9",
+          "migrations_dir": "../../packages/server/migrations"
+        }
+      ],
+      "kv_namespaces": [
+        { "binding": "CACHE", "id": "9b32f9ac5fcb4ab6841f662cb2348265" }
+      ]
+    }
+  }
+}

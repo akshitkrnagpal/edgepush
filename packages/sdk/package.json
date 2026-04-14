@@ -1,0 +1,57 @@
+{
+  "name": "@edgepush/sdk",
+  "version": "1.0.0",
+  "description": "Official Node/TypeScript SDK for edgepush. Send push notifications to iOS and Android with a single API.",
+  "type": "module",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      },
+      "require": {
+        "types": "./dist/index.d.cts",
+        "default": "./dist/index.cjs"
+      }
+    }
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "typecheck": "tsc --noEmit",
+    "prepublishOnly": "pnpm build"
+  },
+  "keywords": [
+    "push-notifications",
+    "apns",
+    "fcm",
+    "ios",
+    "android",
+    "edgepush",
+    "expo-push-alternative"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/akshitkrnagpal/edgepush.git",
+    "directory": "packages/sdk"
+  },
+  "homepage": "https://edgepush.dev",
+  "bugs": "https://github.com/akshitkrnagpal/edgepush/issues",
+  "license": "MIT",
+  "publishConfig": {
+    "access": "public"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "devDependencies": {
+    "tsup": "^8.3.5",
+    "typescript": "~5.9.3"
+  }
+}
