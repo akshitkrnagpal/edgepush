@@ -26,14 +26,14 @@
   },
   "dependencies": {
     "@edgepush/orpc": "workspace:*",
-    "better-auth": "^1.6.2",
+    "better-auth": "^1.6.5",
     "drizzle-orm": "^0.45.2",
-    "hono": "^4.12.12",
+    "hono": "^4.12.14",
     "jose": "^6.2.2",
     "zod": "^4.3.6"
   },
   "devDependencies": {
-    "@cloudflare/workers-types": "^4.20260412.1",
+    "@cloudflare/workers-types": "^4.20260418.1",
     "drizzle-kit": "^0.31.10",
     "tsup": "^8.3.5",
     "typescript": "^6.0.2"
