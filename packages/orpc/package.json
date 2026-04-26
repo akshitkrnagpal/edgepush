@@ -15,7 +15,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@orpc/server": "^1.13.14",
+    "@orpc/server": "^1.14.0",
     "zod": "^4.3.6"
   },
   "devDependencies": {
