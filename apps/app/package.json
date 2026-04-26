@@ -14,24 +14,24 @@
   },
   "dependencies": {
     "@edgepush/server": "workspace:*",
-    "@tanstack/react-query": "^5.99.0",
-    "better-auth": "^1.6.2",
-    "hono": "^4.12.12",
-    "next": "16.2.3",
+    "@tanstack/react-query": "^5.100.5",
+    "better-auth": "^1.6.9",
+    "hono": "^4.12.15",
+    "next": "16.2.4",
     "react": "19.2.5",
     "react-dom": "19.2.5"
   },
   "devDependencies": {
-    "@cloudflare/workers-types": "^4.20260412.1",
-    "@opennextjs/cloudflare": "^1.19.1",
+    "@cloudflare/workers-types": "^4.20260426.1",
+    "@opennextjs/cloudflare": "^1.19.4",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^25.6.0",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "eslint": "^9.39.4",
-    "eslint-config-next": "16.2.3",
+    "eslint-config-next": "16.2.4",
     "tailwindcss": "^4",
     "typescript": "~5.9.3",
-    "wrangler": "^4.81.1"
+    "wrangler": "^4.85.0"
   }
 }
