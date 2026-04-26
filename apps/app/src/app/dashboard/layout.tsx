@@ -49,12 +49,15 @@ export default function DashboardLayout({
             <div className="flex items-center gap-7">
               <Link
                 href="/dashboard"
-                className="flex items-center gap-2.5 font-mono text-[15px] font-bold text-text"
+                className="inline-flex items-center gap-[0.16em] font-mono text-[18px] font-extrabold leading-[0.95] tracking-[-0.045em] text-text"
+                aria-label="edgepush"
               >
-                <span className="relative flex h-[22px] w-[22px] items-center justify-center border border-accent font-mono text-[11px] font-extrabold text-accent">
-                  ep
-                </span>
-                edgepush
+                <span>edge</span>
+                <span
+                  className="inline-block size-[0.4em] shrink-0 rounded-full bg-accent"
+                  aria-hidden="true"
+                />
+                <span>push</span>
               </Link>
               <ul className="flex items-center gap-5 font-mono text-[12px] uppercase tracking-[0.1em]">
                 <li>

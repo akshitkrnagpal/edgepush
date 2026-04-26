@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>edgepush — brand</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700;800&display=swap"
+    />
+    <link
+      rel="stylesheet"
+      href="https://api.fontshare.com/v2/css?f%5B%5D=satoshi@400,500,700,900&display=swap"
+    />
+    <script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+    <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+    <script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+    <style>
+      :root {
+        --bg: #000000;
+        --surface: #0a0a0a;
+        --surface-2: #111111;
+        --rule: #1a1a1a;
+        --rule-strong: #262626;
+        --text: #f5f3ee;
+        --muted-strong: #9a9a9a;
+        --muted: #6b6b6b;
+        --accent: #ff6b1a;
+        --accent-hover: #ff8a42;
+        --accent-dim: #b54a10;
+        --success: #6bcb77;
+        --warning: #f0db4f;
+        --error: #ff4f4f;
+      }
+      html,
+      body {
+        margin: 0;
+        padding: 0;
+        background: var(--bg);
+        color: var(--text);
+        font-family: "Satoshi", system-ui, sans-serif;
+        font-feature-settings: "ss01" on, "ss02" on;
+        -webkit-font-smoothing: antialiased;
+      }
+      .mono {
+        font-family: "JetBrains Mono", ui-monospace, monospace;
+      }
+      .grain {
+        position: fixed;
+        inset: 0;
+        pointer-events: none;
+        opacity: 0.06;
+        mix-blend-mode: overlay;
+        z-index: 0;
+      }
+    </style>
+  </head>
+  <body>
+    <svg class="grain" xmlns="http://www.w3.org/2000/svg">
+      <filter id="grainFilter">
+        <feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="2" stitchTiles="stitch" />
+        <feColorMatrix values="0 0 0 0 1   0 0 0 0 1   0 0 0 0 1   0 0 0 1 0" />
+      </filter>
+      <rect width="100%" height="100%" filter="url(#grainFilter)" />
+    </svg>
+
+    <div id="root"></div>
+
+    <script type="text/babel" src="design-canvas.jsx"></script>
+    <script type="text/babel" src="marks.jsx"></script>
+    <script type="text/babel" src="app.jsx"></script>
+  </body>
+</html>

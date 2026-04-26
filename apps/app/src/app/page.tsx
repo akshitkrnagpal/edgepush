@@ -35,15 +35,16 @@ export default function AppRootPage() {
       <div className="w-full max-w-[520px]">
         {/* Logo + version */}
         <div className="mb-12 text-center">
-          <div className="mb-4 inline-flex items-center justify-center">
-            <span className="relative flex h-[44px] w-[44px] items-center justify-center border border-accent font-mono text-[18px] font-extrabold text-accent">
-              ep
-              <span className="absolute -left-[2px] -top-[2px] h-[4px] w-[4px] bg-accent" />
-              <span className="absolute -right-[2px] -bottom-[2px] h-[4px] w-[4px] bg-accent" />
-            </span>
-          </div>
-          <h1 className="mb-2 font-mono text-[28px] font-extrabold tracking-[-0.02em] text-text">
-            edgepush
+          <h1
+            aria-label="edgepush"
+            className="mb-3 inline-flex items-center justify-center gap-[0.16em] font-mono text-[42px] font-extrabold leading-[0.95] tracking-[-0.045em] text-text"
+          >
+            <span>edge</span>
+            <span
+              className="inline-block size-[0.4em] shrink-0 rounded-full bg-accent"
+              aria-hidden="true"
+            />
+            <span>push</span>
           </h1>
           <p className="font-mono text-[12px] uppercase tracking-[0.12em] text-muted">
             self-hosted · v{CURRENT_VERSION} · <HealthStatus />

@@ -239,14 +239,12 @@ const webhookHtml = renderCodePanel(webhookPanel);
     <nav class="mx-auto flex max-w-[1440px] items-center justify-between border-b border-rule px-6 py-5">
       <a
         href="/"
-        class="flex items-center gap-2.5 font-mono text-[15px] font-bold text-text"
+        class="inline-flex items-center gap-[0.16em] font-mono text-[18px] font-extrabold leading-[0.95] tracking-[-0.045em] text-text"
+        aria-label="edgepush"
       >
-        <span class="relative flex h-[22px] w-[22px] items-center justify-center border border-accent font-mono text-[11px] font-extrabold text-accent">
-          ep
-          <span class="absolute -left-[2px] -top-[2px] h-[3px] w-[3px] bg-accent"></span>
-          <span class="absolute -right-[2px] -bottom-[2px] h-[3px] w-[3px] bg-accent"></span>
-        </span>
-        edgepush
+        <span>edge</span>
+        <span class="inline-block size-[0.4em] shrink-0 rounded-full bg-accent" aria-hidden="true"></span>
+        <span>push</span>
       </a>
       <ul class="hidden items-center gap-7 font-mono text-[12px] uppercase tracking-[0.1em] sm:flex">
         <li>
