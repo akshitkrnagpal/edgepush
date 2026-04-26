@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="640" height="160" viewBox="0 0 640 160" font-family="JetBrains Mono, ui-monospace, monospace">
+  
+  <text x="0" y="120" fill="#F5F3EE">edge</text>
+  <circle cx="285" cy="83" r="22" fill="#FF6B1A"></circle>
+  <text x="332" y="120" fill="#F5F3EE">push</text>
+</svg>
