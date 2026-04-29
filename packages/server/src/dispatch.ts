@@ -24,6 +24,7 @@ import {
   webhooks,
 } from "./db/schema";
 import { decryptCredential } from "./lib/crypto";
+import { EnvValidationError, parseEnv } from "./lib/env";
 import { logWorkerError } from "./lib/observability";
 import { dispatchWebhook, type WebhookPayload } from "./lib/webhook";
 import { dispatchApns } from "./push/apns";
@@ -34,6 +35,25 @@ export async function handleQueue(
   batch: MessageBatch<DispatchJob>,
   env: Env,
 ): Promise<void> {
+  // Fail loudly if the worker is misconfigured. Otherwise we'd hit
+  // an opaque atob() error inside decryptCredential a few stack frames
+  // down and the operator wouldn't know which env var was wrong.
+  try {
+    parseEnv(env);
+  } catch (err) {
+    if (err instanceof EnvValidationError) {
+      console.error(
+        `[dispatch] env validation failed: ${err.variable} ${err.reason}`,
+      );
+      // Retry every job — the operator will fix the env var, and the
+      // queue's exponential backoff will let things drain once it's
+      // healthy again.
+      for (const msg of batch.messages) msg.retry();
+      return;
+    }
+    throw err;
+  }
+
   const db = createDb(env.DB);
 
   // Group by appId so we load credentials once per app per batch
@@ -51,7 +71,16 @@ export async function handleQueue(
     try {
       await processAppBatch(db, env, appId, jobs);
     } catch (err) {
-      console.error(`[dispatch] app ${appId} batch failed:`, err);
+      const errorDetail =
+        err instanceof EnvValidationError
+          ? `env ${err.variable}: ${err.reason}`
+          : err instanceof Error
+            ? err.message
+            : String(err);
+      console.error(
+        `[dispatch] app ${appId} batch failed: ${errorDetail}`,
+        err,
+      );
       // Retry the whole group - individual jobs weren't acked
       for (const job of jobs) job.retry();
     }

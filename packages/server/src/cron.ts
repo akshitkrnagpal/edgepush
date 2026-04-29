@@ -33,6 +33,7 @@ import {
   workerErrors,
 } from "./db/schema";
 import { decryptCredential } from "./lib/crypto";
+import { EnvValidationError, parseEnv } from "./lib/env";
 import { sendEmail } from "./lib/email";
 import { isHosted } from "./lib/mode";
 import { probeApnsCredentials } from "./probes/apns";
@@ -64,6 +65,21 @@ export async function handleScheduled(
   event: ScheduledEvent,
   env: Env,
 ): Promise<void> {
+  // Validate env up front. The probe cycle decrypts every cred and would
+  // hit a generic atob() error mid-loop; better to fail loudly here so
+  // the operator digest the next morning records a single clear row.
+  try {
+    parseEnv(env);
+  } catch (err) {
+    if (err instanceof EnvValidationError) {
+      console.error(
+        `[cron] env validation failed for "${event.cron}": ${err.variable} ${err.reason}`,
+      );
+      return;
+    }
+    throw err;
+  }
+
   switch (event.cron) {
     case "0 * * * *":
       await runProbeCycle(env);
