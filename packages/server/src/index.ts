@@ -5,6 +5,7 @@ import { handleScheduled } from "./cron";
 import { createDb } from "./db";
 import { handleDlq, handleQueue } from "./dispatch";
 import { createAuth } from "./lib/better-auth";
+import { EnvValidationError, checkRequiredEnv } from "./lib/env-validation";
 import { dashboardRouter } from "./routes/dashboard";
 import { receiptsRouter } from "./routes/receipts";
 import { sendRouter } from "./routes/send";
@@ -47,6 +48,28 @@ app.use(
 app.use("*", async (c, next) => {
   c.set("db", createDb(c.env.DB));
   await next();
+});
+
+// Catch EnvValidationError anywhere in the handler chain and turn it
+// into a structured 503 instead of a generic 500. Operators looking at
+// logs see exactly which env var is wrong and why.
+app.onError((err, c) => {
+  if (err instanceof EnvValidationError) {
+    console.error(
+      `[edgepush] env validation failed at ${c.req.method} ${c.req.path}: ${err.variable} ${err.reason}`,
+    );
+    return c.json(
+      {
+        error: "server_misconfigured",
+        message:
+          "An environment variable required by this endpoint is missing or invalid. Check the Worker logs.",
+        variable: err.variable,
+        reason: err.reason,
+      },
+      503,
+    );
+  }
+  throw err;
 });
 
 app.get("/", (c) =>
@@ -166,6 +189,26 @@ app.get("/health/deep", async (c) => {
       ? "binding present (no synthetic enqueue)"
       : "binding missing",
   };
+
+  // Required-secrets validation. Reports each misconfigured env var
+  // by name + reason — does not include the value itself.
+  {
+    const start = Date.now();
+    const envErrors = checkRequiredEnv(
+      c.env as unknown as Record<string, unknown>,
+    );
+    if (envErrors.length === 0) {
+      results.env = { status: "ok", latency_ms: Date.now() - start };
+    } else {
+      results.env = {
+        status: "down",
+        latency_ms: Date.now() - start,
+        detail: envErrors
+          .map((e) => `${e.variable}: ${e.reason}`)
+          .join("; "),
+      };
+    }
+  }
 
   // Roll-up: any 'down' component flips the overall to 'down'.
   // 'degraded' (e.g. killswitch active) flips to 'degraded'.
