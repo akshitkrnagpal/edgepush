@@ -24,7 +24,7 @@ import {
   webhooks,
 } from "./db/schema";
 import { decryptCredential } from "./lib/crypto";
-import { EnvValidationError, validateRequiredEnv } from "./lib/env-validation";
+import { EnvValidationError, parseEnv } from "./lib/env";
 import { logWorkerError } from "./lib/observability";
 import { dispatchWebhook, type WebhookPayload } from "./lib/webhook";
 import { dispatchApns } from "./push/apns";
@@ -39,7 +39,7 @@ export async function handleQueue(
   // an opaque atob() error inside decryptCredential a few stack frames
   // down and the operator wouldn't know which env var was wrong.
   try {
-    validateRequiredEnv(env as unknown as Record<string, unknown>);
+    parseEnv(env);
   } catch (err) {
     if (err instanceof EnvValidationError) {
       console.error(

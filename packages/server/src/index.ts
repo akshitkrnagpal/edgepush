@@ -5,7 +5,7 @@ import { handleScheduled } from "./cron";
 import { createDb } from "./db";
 import { handleDlq, handleQueue } from "./dispatch";
 import { createAuth } from "./lib/better-auth";
-import { EnvValidationError, checkRequiredEnv } from "./lib/env-validation";
+import { EnvValidationError, checkEnv } from "./lib/env";
 import { dashboardRouter } from "./routes/dashboard";
 import { receiptsRouter } from "./routes/receipts";
 import { sendRouter } from "./routes/send";
@@ -194,9 +194,7 @@ app.get("/health/deep", async (c) => {
   // by name + reason — does not include the value itself.
   {
     const start = Date.now();
-    const envErrors = checkRequiredEnv(
-      c.env as unknown as Record<string, unknown>,
-    );
+    const envErrors = checkEnv(c.env);
     if (envErrors.length === 0) {
       results.env = { status: "ok", latency_ms: Date.now() - start };
     } else {

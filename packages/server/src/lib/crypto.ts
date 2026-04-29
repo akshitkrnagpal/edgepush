@@ -6,7 +6,7 @@
  * account JSONs are encrypted with this key before being written to D1.
  */
 
-import { validateBase64 } from "./env-validation";
+import { validateEncryptionKey } from "./env";
 
 function base64ToBytes(b64: string): Uint8Array {
   const binary = atob(b64);
@@ -26,11 +26,11 @@ function bytesToBase64(bytes: Uint8Array): string {
 }
 
 async function importKey(rawBase64: string): Promise<CryptoKey> {
-  // Throws an EnvValidationError naming ENCRYPTION_KEY if the value is
-  // missing, not base64, or doesn't decode to exactly 32 bytes — much
-  // clearer at the call site than a generic atob() InvalidCharacterError
-  // surfacing from inside the queue consumer.
-  const validated = validateBase64(rawBase64, "ENCRYPTION_KEY", 32);
+  // Throws EnvValidationError naming ENCRYPTION_KEY if the value is
+  // missing, not base64, or doesn't decode to exactly 32 bytes —
+  // clearer at the call site than a generic atob() error from inside
+  // the queue consumer.
+  const validated = validateEncryptionKey(rawBase64);
   const keyBytes = base64ToBytes(validated);
   return crypto.subtle.importKey(
     "raw",

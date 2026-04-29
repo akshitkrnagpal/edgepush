@@ -33,7 +33,7 @@ import {
   workerErrors,
 } from "./db/schema";
 import { decryptCredential } from "./lib/crypto";
-import { EnvValidationError, validateRequiredEnv } from "./lib/env-validation";
+import { EnvValidationError, parseEnv } from "./lib/env";
 import { sendEmail } from "./lib/email";
 import { isHosted } from "./lib/mode";
 import { probeApnsCredentials } from "./probes/apns";
@@ -69,7 +69,7 @@ export async function handleScheduled(
   // hit a generic atob() error mid-loop; better to fail loudly here so
   // the operator digest the next morning records a single clear row.
   try {
-    validateRequiredEnv(env as unknown as Record<string, unknown>);
+    parseEnv(env);
   } catch (err) {
     if (err instanceof EnvValidationError) {
       console.error(
