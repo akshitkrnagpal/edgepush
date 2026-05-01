@@ -126,6 +126,22 @@ export interface SendResponseItem {
   /** Immediate status: ok if accepted, error if rejected before send. */
   status: "ok" | "error";
   message?: string;
+  /**
+   * Synchronous delivery result, when the API tried inline dispatch
+   * before responding. Absent on legacy queued-only paths.
+   *
+   *   - delivered: APNs/FCM accepted the push. No need to poll
+   *     `/v1/receipts/:id` for status.
+   *   - failed: APNs/FCM rejected with a terminal error. `error` and
+   *     `tokenInvalid` carry the reason.
+   *   - queued: inline dispatch was deferred (large batch or transient
+   *     failure). Poll the receipt endpoint for the eventual status.
+   */
+  delivery?: "delivered" | "failed" | "queued";
+  /** Underlying APNs/FCM error when `delivery === "failed"`. */
+  error?: string;
+  /** True when the device token should be considered invalid. */
+  tokenInvalid?: boolean;
 }
 
 export interface SendResponse {

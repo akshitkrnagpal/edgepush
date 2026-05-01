@@ -8,8 +8,17 @@
  *   1. Validate API key and extract appId.
  *   2. Rate limit via the app's Durable Object.
  *   3. For each message, insert a row in `messages` with status "queued".
- *   4. Enqueue a dispatch job for each message.
- *   5. Return tickets (message ids) the caller can poll.
+ *   4. Direct-first: for batches up to INLINE_THRESHOLD, attempt inline
+ *      APNs/FCM dispatch. Any transient failures fall back to the
+ *      queue. Larger batches skip inline and go straight to the queue.
+ *   5. Return tickets - each carrying its synchronous delivery result
+ *      when known, or "queued" when the queue will handle it.
+ *
+ * Why direct-first: the queue's max_batch_timeout adds 1-5s of
+ * batching latency at low send rates. Calling APNs/FCM synchronously
+ * keeps device-perceived latency at one HTTPS round-trip when things
+ * are healthy, while still using the queue for retries and for batches
+ * large enough to benefit from buffering.
  */
 
 import { Hono } from "hono";
@@ -17,30 +26,26 @@ import { Hono } from "hono";
 import { SendRequestSchema, type SendResponseItem } from "@edgepush/orpc";
 import { authenticateApiKey, authenticateSessionApp } from "../lib/auth";
 import { generateId } from "../lib/crypto";
+import { messages } from "../db/schema";
+import { inlineDispatchAppBatch } from "../inline-dispatch";
 import { reserveMonthlyUsage } from "../lib/plan";
 import type { RateLimiter } from "../rate-limiter";
-import type { AppContext } from "../types";
-import { messages } from "../db/schema";
+import type { AppContext, DispatchJob } from "../types";
+import { inArray } from "drizzle-orm";
 
 /**
- * Kill switch KV key. If this key is set to ANY non-empty value, the
- * send handler returns 503 immediately, before auth, before any DB
- * read, before any downstream work. The operator can flip it in one
- * command:
- *
- *   wrangler kv:key put --binding=CACHE edgepush:killswitch:send "maintenance"
- *
- * And clear it just as fast:
- *
- *   wrangler kv:key delete --binding=CACHE edgepush:killswitch:send
- *
- * Intended for incident response, e.g., a bad deploy is corrupting
- * messages rows, pull the cord, ship the fix, release the cord. We
- * check KV on every request because KV reads from the nearest edge
- * cache are sub-millisecond; adding ~1ms of latency on the send path
- * is an acceptable price for a panic button.
+ * Kill switch KV key. Non-empty value here disables /v1/send before
+ * auth or any DB read. Operator flips it with `wrangler kv:key put`.
  */
 const KILLSWITCH_SEND_KEY = "edgepush:killswitch:send";
+
+/**
+ * Above this batch size we skip the inline path entirely. The queue's
+ * batching is genuinely useful for large fan-outs (cred loads
+ * amortized across the batch, single APNs/FCM connection reused). At
+ * smaller batches the batching is just dead latency.
+ */
+const INLINE_THRESHOLD = 10;
 
 export const sendRouter = new Hono<AppContext>();
 
@@ -144,15 +149,13 @@ sendRouter.post("/send", async (c) => {
   }
 
   const now = Date.now();
-  const tickets: SendResponseItem[] = [];
-  const jobs: { messageId: string; appId: string }[] = [];
+  const idByIndex: string[] = [];
   const rows: Array<typeof messages.$inferInsert> = [];
 
   for (const msg of msgs) {
     const id = generateId();
+    idByIndex.push(id);
 
-    // Determine target and platform. Topic/condition sends are always
-    // Android (FCM-only). Token sends infer from format.
     const target = msg.to ?? msg.topic ?? msg.condition ?? "";
     const isBroadcast = !msg.to;
     const platform = isBroadcast
@@ -172,20 +175,66 @@ sendRouter.post("/send", async (c) => {
       createdAt: now,
       updatedAt: now,
     });
-
-    jobs.push({ messageId: id, appId: authedApp.appId });
-    tickets.push({ id, status: "ok" });
   }
 
   await c.var.db.insert(messages).values(rows);
 
-  // Enqueue dispatch jobs in a single batch call
-  if (jobs.length > 0) {
-    await c.env.DISPATCH_QUEUE.sendBatch(
-      jobs.map((job) => ({ body: job })),
+  // Below the threshold we try inline dispatch. Above, straight to the
+  // queue (existing behavior). Inline is best for the common
+  // "single-push from an app server" shape; large fan-outs benefit
+  // from the queue's amortized cred load.
+  if (rows.length <= INLINE_THRESHOLD) {
+    // Re-fetch rows so dispatchOne sees the canonical inserted shape
+    // (id, payloadJson, etc) without the route having to construct the
+    // MessageRow type by hand.
+    const inserted = await c.var.db
+      .select()
+      .from(messages)
+      .where(inArray(messages.id, idByIndex));
+
+    const outcomes = await inlineDispatchAppBatch(
+      c.var.db,
+      c.env,
+      authedApp.appId,
+      inserted,
     );
+
+    const byId = new Map(outcomes.map((o) => [o.messageId, o]));
+    const tickets: SendResponseItem[] = idByIndex.map((id) => {
+      const out = byId.get(id);
+      if (!out) {
+        return { id, status: "ok", delivery: "queued" };
+      }
+      if (out.delivery === "delivered") {
+        return { id, status: "ok", delivery: "delivered" };
+      }
+      if (out.delivery === "failed") {
+        return {
+          id,
+          status: "ok",
+          delivery: "failed",
+          error: out.error,
+          tokenInvalid: out.tokenInvalid,
+        };
+      }
+      return { id, status: "ok", delivery: "queued" };
+    });
+
+    return c.json({ data: tickets });
   }
 
+  // Large batch: queue path. Caller should poll receipts.
+  const jobs: DispatchJob[] = idByIndex.map((id) => ({
+    messageId: id,
+    appId: authedApp.appId,
+  }));
+  await c.env.DISPATCH_QUEUE.sendBatch(jobs.map((body) => ({ body })));
+
+  const tickets: SendResponseItem[] = idByIndex.map((id) => ({
+    id,
+    status: "ok",
+    delivery: "queued",
+  }));
   return c.json({ data: tickets });
 });
 
