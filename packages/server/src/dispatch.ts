@@ -1,15 +1,20 @@
 /**
- * Queue consumer that dispatches queued messages to APNs or FCM.
+ * Push dispatch.
  *
- * Runs on batches of up to 100 jobs. For each job:
- *   1. Load the message row from D1
- *   2. Load the app's APNs or FCM credentials (decrypt on the fly)
- *   3. POST to APNs or FCM
- *   4. Update the message row with the result
- *   5. Fire a webhook if the app has one configured
+ * One core function (dispatchOne) does the actual APNs/FCM call, DB
+ * write-back, and webhook fire. It's reused by:
  *
- * Queue retries: if dispatch throws, the message remains in the queue and
- * Cloudflare retries with exponential backoff up to max_retries.
+ *   - handleQueue (this file): batched queue consumer. Loads creds +
+ *     webhook once per app per batch and runs dispatchOne per message.
+ *   - inlineDispatch (./inline-dispatch.ts): synchronous /v1/send path
+ *     that tries to deliver before the API responds. Falls back to
+ *     enqueueing on transient failures.
+ *
+ * Queue retries: if dispatch throws, the message remains in the queue
+ * and Cloudflare retries with exponential backoff up to max_retries.
+ * APNs/FCM responses (including 4xx) are terminal, marked failed and
+ * acked. The DLQ exists for the rare case where a thrown exception
+ * burns through retries.
  */
 
 import { eq, inArray } from "drizzle-orm";
@@ -30,13 +35,181 @@ import { dispatchApns } from "./push/apns";
 import { dispatchFcm } from "./push/fcm";
 import type { DispatchJob, Env } from "./types";
 
+/** Resolved APNs credentials for an app. */
+export type AppApnsCreds = NonNullable<
+  Awaited<ReturnType<typeof loadApnsCredentials>>
+>;
+
+/** Resolved FCM credentials for an app. */
+export type AppFcmCreds = NonNullable<
+  Awaited<ReturnType<typeof loadFcmCredentials>>
+>;
+
+/** Webhook config row, or null if the app has none. */
+export type AppWebhook = Awaited<ReturnType<typeof loadWebhook>>;
+
+/** A single row from the messages table. */
+type MessageRow = typeof messages.$inferSelect;
+
+/** Outcome of dispatching one message. */
+export type DispatchOutcome =
+  | { kind: "delivered" }
+  | { kind: "failed"; error: string; tokenInvalid: boolean };
+
+/**
+ * Dispatch one message. Updates the row to "sending", calls APNs/FCM,
+ * writes back the terminal status, and fires a webhook (sync first
+ * attempt + queue retry on failure).
+ *
+ * Throws on infrastructural errors (DB unreachable, decryption failed
+ * via thrown exception). Callers in the queue path translate throws
+ * into msg.retry(); the inline path translates them into "enqueue for
+ * retry, return queued".
+ */
+export async function dispatchOne(
+  db: ReturnType<typeof createDb>,
+  env: Env,
+  appId: string,
+  row: MessageRow,
+  apnsCreds: AppApnsCreds | null,
+  fcmCreds: AppFcmCreds | null,
+  webhook: AppWebhook,
+): Promise<DispatchOutcome> {
+  await db
+    .update(messages)
+    .set({ status: "sending", updatedAt: Date.now() })
+    .where(eq(messages.id, row.id));
+
+  let result: { ok: boolean; error?: string; tokenInvalid?: boolean };
+  try {
+    const payload = JSON.parse(row.payloadJson) as PushMessage;
+    const isBroadcast = !!payload.topic || !!payload.condition;
+
+    if (row.platform === "ios" && !isBroadcast) {
+      if (!apnsCreds) {
+        result = { ok: false, error: "APNs credentials not configured" };
+      } else {
+        result = await dispatchApns(apnsCreds, row.to, payload);
+      }
+    } else {
+      if (!fcmCreds) {
+        result = { ok: false, error: "FCM credentials not configured" };
+      } else {
+        const deviceToken = isBroadcast ? null : row.to;
+        result = await dispatchFcm(fcmCreds, deviceToken, payload);
+      }
+    }
+  } catch (err) {
+    result = {
+      ok: false,
+      error: err instanceof Error ? err.message : "dispatch error",
+    };
+  }
+
+  const nextStatus = result.ok ? "delivered" : "failed";
+  await db
+    .update(messages)
+    .set({
+      status: nextStatus,
+      error: result.error ?? null,
+      tokenInvalid: result.tokenInvalid ?? false,
+      updatedAt: Date.now(),
+    })
+    .where(eq(messages.id, row.id));
+
+  // Shadow-log non-token-invalid failures for the operator digest.
+  if (!result.ok && !result.tokenInvalid) {
+    await logWorkerError(db, {
+      kind: "dispatch",
+      payload: {
+        appId,
+        messageId: row.id,
+        platform: row.platform,
+        error: result.error ?? "unknown",
+      },
+    });
+  }
+
+  await fireWebhook(db, env, row.id, appId, webhook, {
+    event: nextStatus === "delivered" ? "message.delivered" : "message.failed",
+    messageId: row.id,
+    appId,
+    status: nextStatus,
+    error: result.error ?? null,
+    tokenInvalid: result.tokenInvalid ?? false,
+    timestamp: Date.now(),
+  });
+
+  if (result.ok) return { kind: "delivered" };
+  return {
+    kind: "failed",
+    error: result.error ?? "unknown",
+    tokenInvalid: result.tokenInvalid ?? false,
+  };
+}
+
+/**
+ * Fire-and-forget webhook delivery: try once inline, queue for retry on
+ * any failure (network or non-2xx). Extracted so both the queue
+ * consumer and the inline path use identical webhook semantics.
+ */
+async function fireWebhook(
+  db: ReturnType<typeof createDb>,
+  env: Env,
+  messageId: string,
+  appId: string,
+  webhook: AppWebhook,
+  payload: WebhookPayload,
+): Promise<void> {
+  if (!webhook?.enabled) return;
+
+  let firstAttemptOk = false;
+  try {
+    const r = await dispatchWebhook(webhook.url, webhook.secret, payload);
+    firstAttemptOk = r.ok;
+  } catch {
+    // Network error on first attempt. Will enqueue for retry below.
+  }
+  if (firstAttemptOk) return;
+
+  try {
+    await env.WEBHOOK_QUEUE.send({
+      url: webhook.url,
+      secret: webhook.secret,
+      payload,
+      attempt: 1,
+    });
+  } catch (enqueueErr) {
+    console.error(
+      `[dispatch] webhook enqueue failed for ${messageId}:`,
+      enqueueErr,
+    );
+    await logWorkerError(db, {
+      kind: "webhook",
+      payload: {
+        messageId,
+        appId,
+        event: payload.event,
+        url: webhook.url,
+        reason: "enqueue_failed",
+        error:
+          enqueueErr instanceof Error ? enqueueErr.message : String(enqueueErr),
+      },
+    });
+  }
+}
+
+/**
+ * Queue consumer. Runs on batches of up to 100 jobs, groups by app to
+ * amortize credential + webhook loads, then runs dispatchOne per
+ * message. Throws → msg.retry(); APNs/FCM 4xx → marked failed + acked.
+ */
 export async function handleQueue(
   batch: MessageBatch<DispatchJob>,
   env: Env,
 ): Promise<void> {
   const db = createDb(env.DB);
 
-  // Group by appId so we load credentials once per app per batch
   const byApp = new Map<string, Message<DispatchJob>[]>();
   for (const msg of batch.messages) {
     const existing = byApp.get(msg.body.appId);
@@ -51,7 +224,11 @@ export async function handleQueue(
     try {
       await processAppBatch(db, env, appId, jobs);
     } catch (err) {
-      console.error(`[dispatch] app ${appId} batch failed:`, err);
+      const errorDetail = err instanceof Error ? err.message : String(err);
+      console.error(
+        `[dispatch] app ${appId} batch failed: ${errorDetail}`,
+        err,
+      );
       // Retry the whole group - individual jobs weren't acked
       for (const job of jobs) job.retry();
     }
@@ -69,23 +246,13 @@ async function processAppBatch(
     .select()
     .from(messages)
     .where(inArray(messages.id, messageIds));
-
   const rowById = new Map(rows.map((r) => [r.id, r]));
 
-  // Load creds lazily (only if we have iOS or Android messages)
   const hasIos = rows.some((r) => r.platform === "ios");
   const hasAndroid = rows.some((r) => r.platform === "android");
-
   const apnsCreds = hasIos ? await loadApnsCredentials(db, env, appId) : null;
   const fcmCreds = hasAndroid ? await loadFcmCredentials(db, env, appId) : null;
-
-  // Load webhook once per batch (may be null if not configured)
-  const webhook = await db
-    .select()
-    .from(webhooks)
-    .where(eq(webhooks.appId, appId))
-    .limit(1)
-    .then((rows) => rows[0] ?? null);
+  const webhook = await loadWebhook(db, appId);
 
   for (const job of jobs) {
     const row = rowById.get(job.body.messageId);
@@ -93,156 +260,23 @@ async function processAppBatch(
       job.ack();
       continue;
     }
-
-    await db
-      .update(messages)
-      .set({ status: "sending", updatedAt: Date.now() })
-      .where(eq(messages.id, row.id));
-
-    let result: { ok: boolean; error?: string; tokenInvalid?: boolean };
-
     try {
-      const payload = JSON.parse(row.payloadJson) as PushMessage;
-      // Topic/condition sends are FCM-only and have no device token.
-      const isBroadcast = !!payload.topic || !!payload.condition;
-
-      if (row.platform === "ios" && !isBroadcast) {
-        if (!apnsCreds) {
-          result = { ok: false, error: "APNs credentials not configured" };
-        } else {
-          result = await dispatchApns(apnsCreds, row.to, payload);
-        }
-      } else {
-        if (!fcmCreds) {
-          result = { ok: false, error: "FCM credentials not configured" };
-        } else {
-          // For token sends, row.to is the device token. For topic/
-          // condition sends, row.to stores the topic/condition string
-          // for logging, and the actual target is in the payload.
-          const deviceToken = isBroadcast ? null : row.to;
-          result = await dispatchFcm(fcmCreds, deviceToken, payload);
-        }
-      }
+      await dispatchOne(db, env, appId, row, apnsCreds, fcmCreds, webhook);
+      job.ack();
     } catch (err) {
-      result = {
-        ok: false,
-        error: err instanceof Error ? err.message : "dispatch error",
-      };
+      console.error(`[dispatch] threw for ${row.id}:`, err);
+      job.retry();
     }
-
-    const nextStatus = result.ok ? "delivered" : "failed";
-    await db
-      .update(messages)
-      .set({
-        status: nextStatus,
-        error: result.error ?? null,
-        tokenInvalid: result.tokenInvalid ?? false,
-        updatedAt: Date.now(),
-      })
-      .where(eq(messages.id, row.id));
-
-    // Shadow-log the failure for operator visibility. Does NOT change
-    // retry semantics, the message has already been marked failed and
-    // the queue will not re-dispatch. This exists so the daily digest
-    // cron can surface patterns (many fails on one app, one device
-    // token repeatedly invalid, etc.) that console.error would lose.
-    //
-    // Transient/token-invalid errors are noisy and expected, so we
-    // only log the definitively-failed case where tokenInvalid is
-    // false, those are the ones that hint at operator-level problems.
-    if (!result.ok && !result.tokenInvalid) {
-      await logWorkerError(db, {
-        kind: "dispatch",
-        payload: {
-          appId,
-          messageId: row.id,
-          platform: row.platform,
-          error: result.error ?? "unknown",
-        },
-      });
-    }
-
-    // Fire webhook if configured and enabled.
-    //
-    // First attempt is inline (fast path for healthy endpoints). If the
-    // first attempt fails, enqueue the job into WEBHOOK_QUEUE for retry
-    // with backoff. The webhook queue consumer handles 3 retries; after
-    // that, jobs land in edgepush-webhook-dlq where they're logged to
-    // worker_errors for the operator digest.
-    //
-    // This keeps the push dispatch consumer fast (no inline retry loop)
-    // while giving transient webhook failures a fair retry window.
-    if (webhook?.enabled) {
-      const webhookPayload: WebhookPayload = {
-        event: nextStatus === "delivered" ? "message.delivered" : "message.failed",
-        messageId: row.id,
-        appId,
-        status: nextStatus,
-        error: result.error ?? null,
-        tokenInvalid: result.tokenInvalid ?? false,
-        timestamp: Date.now(),
-      };
-
-      let firstAttemptOk = false;
-      try {
-        const webhookResult = await dispatchWebhook(
-          webhook.url,
-          webhook.secret,
-          webhookPayload,
-        );
-        firstAttemptOk = webhookResult.ok;
-      } catch {
-        // Network error on first attempt. Will enqueue for retry below.
-      }
-
-      // Enqueue for retry if the first attempt failed. The webhook
-      // queue consumer will retry with Cloudflare's built-in backoff.
-      if (!firstAttemptOk) {
-        try {
-          await env.WEBHOOK_QUEUE.send({
-            url: webhook.url,
-            secret: webhook.secret,
-            payload: webhookPayload,
-            attempt: 1,
-          });
-        } catch (enqueueErr) {
-          // If even the enqueue fails (queue binding down), log to
-          // worker_errors as a last resort. The webhook is lost but
-          // the operator will see it in the digest.
-          console.error(
-            `[dispatch] webhook enqueue failed for ${row.id}:`,
-            enqueueErr,
-          );
-          await logWorkerError(db, {
-            kind: "webhook",
-            payload: {
-              messageId: row.id,
-              appId,
-              event: webhookPayload.event,
-              url: webhook.url,
-              reason: "enqueue_failed",
-              error:
-                enqueueErr instanceof Error
-                  ? enqueueErr.message
-                  : String(enqueueErr),
-            },
-          });
-        }
-      }
-    }
-
-    job.ack();
   }
 }
 
-async function loadApnsCredentials(
+export async function loadApnsCredentials(
   db: ReturnType<typeof createDb>,
   env: Env,
   appId: string,
 ) {
   // bundleId is derived from apps.packageName, not from the (deprecated)
-  // apns_credentials.bundle_id column. This is the post-normalization
-  // read path, one source of truth.
+  // apns_credentials.bundle_id column.
   const row = await db
     .select({
       keyId: apnsCredentials.keyId,
@@ -276,7 +310,7 @@ async function loadApnsCredentials(
   };
 }
 
-async function loadFcmCredentials(
+export async function loadFcmCredentials(
   db: ReturnType<typeof createDb>,
   env: Env,
   appId: string,
@@ -303,20 +337,27 @@ async function loadFcmCredentials(
   };
 }
 
+export async function loadWebhook(
+  db: ReturnType<typeof createDb>,
+  appId: string,
+) {
+  return db
+    .select()
+    .from(webhooks)
+    .where(eq(webhooks.appId, appId))
+    .limit(1)
+    .then((rows) => rows[0] ?? null);
+}
+
 /**
- * Dead-letter queue consumer.
+ * Dead-letter queue consumer. Logs each dead-letter to worker_errors
+ * for the daily operator digest, then acks unconditionally.
  *
- * Cloudflare Queues retries a message `max_retries` times before sending
- * it to the dead-letter queue configured on the main consumer. This
- * handler picks those up, logs each one to `worker_errors` so the
- * daily operator digest will surface them, and acks so the DLQ drains.
- *
- * We deliberately DO NOT re-run dispatch logic here. A message that
- * failed 3 consecutive retries against a healthy provider is telling
- * us something structural (bad creds, bad payload, bad token) and
- * operator intervention is the right response. The replay-dlq.ts
- * operator script exists for the rare case where a transient outage
- * buried good messages.
+ * We deliberately do NOT re-run dispatch logic here. A message that
+ * burned all retries against a healthy provider is telling us
+ * something structural and operator intervention is the right
+ * response. The replay-dlq.ts script exists for the rare case where
+ * a transient outage buried good messages.
  */
 export async function handleDlq(
   batch: MessageBatch<DispatchJob>,
@@ -334,9 +375,6 @@ export async function handleDlq(
         timestamp: msg.timestamp.getTime(),
       },
     });
-    // Ack regardless, the DLQ is observability-only. If logging
-    // failed, logWorkerError already swallowed the error. Retrying a
-    // dead-letter just loops forever.
     msg.ack();
   }
 }
