@@ -22,18 +22,18 @@
   },
   "dependencies": {
     "@edgepush/server": "workspace:*",
-    "better-auth": "^1.6.9",
+    "better-auth": "^1.6.11",
     "drizzle-orm": "^0.45.2",
-    "hono": "^4.12.15",
-    "jose": "^6.2.2",
+    "hono": "^4.12.19",
+    "jose": "^6.2.3",
     "zod": "^3.25.0"
   },
   "devDependencies": {
-    "@cloudflare/vitest-pool-workers": "^0.15.0",
-    "@cloudflare/workers-types": "^4.20260426.1",
+    "@cloudflare/vitest-pool-workers": "^0.16.6",
+    "@cloudflare/workers-types": "^4.20260517.1",
     "drizzle-kit": "^0.31.10",
     "typescript": "^5.9.3",
-    "vitest": "^4.1.5",
-    "wrangler": "^4.85.0"
+    "vitest": "^4.1.6",
+    "wrangler": "^4.92.0"
   }
 }
