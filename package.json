@@ -15,7 +15,7 @@
     "release": "node scripts/release.mjs"
   },
   "devDependencies": {
-    "turbo": "^2.9.5",
+    "turbo": "^2.9.14",
     "typescript": "^6.0.2"
   },
   "engines": {
